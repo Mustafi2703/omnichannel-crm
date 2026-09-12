@@ -85,3 +85,9 @@ export async function requireSession() {
   if (!user) throw new Error("UNAUTHORIZED");
   return session;
 }
+
+export async function requireRole(...roles: Role[]) {
+  const session = await requireSession();
+  if (!roles.includes(session.role)) throw new Error("FORBIDDEN");
+  return session;
+}

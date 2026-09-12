@@ -30,7 +30,7 @@ export default function TasksPage() {
   }, []);
 
   async function complete(id: string) {
-    await fetch("/api/tasks", {
+    await fetch(`/api/tasks/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, status: "done" }),

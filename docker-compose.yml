@@ -1,0 +1,45 @@
+services:
+  app:
+    image: omnicrm:staging
+    build: .
+    env_file: .env
+    # Keep the app private until a TLS reverse proxy and domain are configured.
+    ports: ["127.0.0.1:3000:3000"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    restart: unless-stopped
+  worker:
+    image: omnicrm:staging
+    command: npm run worker
+    env_file: .env
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    restart: unless-stopped
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: omnicrm
+      POSTGRES_USER: omnicrm
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+    volumes: [postgres_data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U omnicrm -d omnicrm"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes: [redis_data:/data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+volumes:
+  postgres_data:
+  redis_data:

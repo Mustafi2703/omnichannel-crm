@@ -67,10 +67,22 @@ model Tenant {
   pipelineStages  PipelineStage[]
   tasks           Task[]
   knowledgeDocs   KnowledgeDocument[]
+  knowledgeChunks KnowledgeChunk[]
+  knowledgeIndexes KnowledgeIndex[]
   usageEvents     UsageEvent[]
   rateCard        RateCard?
   budgetPolicy    BudgetPolicy?
   messages        Message[]
+  attachments     Attachment[]
+  auditLogs       AuditLog[]
+  integrations    IntegrationConnection[]
+  notifications   Notification[]
+  automationRules AutomationRule[]
+  automationRuns  AutomationRun[]
+  calendarEvents  CalendarEvent[]
+  whatsappTemplates WhatsappTemplate[]
+  campaigns       Campaign[]
+  campaignRecipients CampaignRecipient[]
 }
 
 model User {
@@ -91,6 +103,8 @@ model User {
   assignedConvos   Conversation[] @relation("ConvoAssignee")
   assignedTasks    Task[]         @relation("TaskAssignee")
   sentMessages     Message[]
+  auditLogs        AuditLog[]
+  calendarEvents   CalendarEvent[] @relation("EventOwner")
 
   @@unique([tenantId, email])
 }
@@ -128,6 +142,7 @@ model Contact {
   landingUrl              String?
   ownerUserId             String?
   metadata                Json       @default("{}")
+  automationPausedAt      DateTime?
   createdAt               DateTime   @default(now())
   updatedAt               DateTime   @updatedAt
 
@@ -136,6 +151,9 @@ model Contact {
   identities    ContactIdentity[]
   leads         Lead[]
   conversations Conversation[]
+  tasks         Task[]
+  calendarEvents CalendarEvent[]
+  campaignRecipients CampaignRecipient[]
 
   @@index([tenantId, phone])
   @@index([tenantId, email])
@@ -178,6 +196,7 @@ model Lead {
   stage   PipelineStage @relation(fields: [stageId], references: [id])
   owner   User?         @relation("LeadOwner", fields: [ownerUserId], references: [id])
   tasks   Task[]
+  calendarEvents CalendarEvent[]
 
   @@index([tenantId, stageId])
   @@index([tenantId, nextFollowupAt])
@@ -190,6 +209,12 @@ model Conversation {
   channelType  String             @default("website")
   status       ConversationStatus @default(open)
   assigneeId   String?
+  assignedAt   DateTime?
+  unassignedAt DateTime?
+  lastCallAt   DateTime?
+  unassignedEscalatedAt DateTime?
+  firstCallEscalatedAt  DateTime?
+  threeHourEscalatedAt  DateTime?
   lastMessageAt DateTime          @default(now())
   aiMode       AiMode             @default(auto)
   handoffAt    DateTime?
@@ -201,6 +226,9 @@ model Conversation {
   contact  Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
   assignee User?     @relation("ConvoAssignee", fields: [assigneeId], references: [id])
   messages Message[]
+  tasks    Task[]
+  attachments Attachment[]
+  calendarEvents CalendarEvent[]
 
   @@index([tenantId, status, lastMessageAt])
 }
@@ -215,11 +243,14 @@ model Message {
   bodyText          String
   externalMessageId String?
   aiMeta            Json?
+  deliveryStatus    String           @default("sent")
+  deliveryError     String?
   createdAt         DateTime         @default(now())
 
   tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   senderUser   User?        @relation(fields: [senderUserId], references: [id])
+  attachments  Attachment[]
 
   @@unique([tenantId, externalMessageId])
   @@index([conversationId, createdAt])
@@ -230,10 +261,13 @@ model Task {
   tenantId     String
   type         String     @default("follow_up")
   leadId       String?
+  contactId    String?
+  conversationId String?
   title        String
   body         String?
   assigneeId   String?
   dueAt        DateTime?
+  dueNotifiedAt DateTime?
   status       TaskStatus @default(open)
   completedAt  DateTime?
   createdAt    DateTime   @default(now())
@@ -241,20 +275,267 @@ model Task {
 
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   lead     Lead?  @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  contact  Contact? @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  conversation Conversation? @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   assignee User?  @relation("TaskAssignee", fields: [assigneeId], references: [id])
 
   @@index([tenantId, status, dueAt])
+  @@index([status, dueNotifiedAt, dueAt])
+  @@index([tenantId, contactId])
+  @@index([tenantId, conversationId])
 }
 
-model KnowledgeDocument {
+model Attachment {
+  id             String   @id @default(cuid())
+  tenantId       String
+  conversationId String
+  messageId      String?
+  filename       String
+  contentType    String
+  storageKey     String
+  sizeBytes      Int
+  createdAt      DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  message Message? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, conversationId])
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  tenantId    String
+  userId      String?
+  type        String
+  title       String
+  body        String?
+  readAt      DateTime?
+  createdAt   DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, userId, readAt])
+  @@index([tenantId, userId, createdAt])
+}
+
+model AutomationRule {
   id        String   @id @default(cuid())
   tenantId  String
-  title     String
-  content   String
-  status    String   @default("ready")
+  name      String
+  trigger   String
+  action    String
+  config    Json     @default("{}")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  runs   AutomationRun[]
+  @@index([tenantId, trigger, isActive])
+}
+
+model AutomationRun {
+  id        String   @id @default(cuid())
+  tenantId  String
+  ruleId    String
+  status    String
+  detail    Json     @default("{}")
   createdAt DateTime @default(now())
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  rule AutomationRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  @@index([tenantId, createdAt])
+}
+
+model CalendarEvent {
+  id             String   @id @default(cuid())
+  tenantId       String
+  title          String
+  description    String?
+  startsAt       DateTime
+  endsAt         DateTime?
+  leadId         String?
+  contactId      String?
+  conversationId String?
+  ownerUserId    String?
+  reminderAt     DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lead         Lead?         @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  contact      Contact?      @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  conversation Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  owner        User?         @relation("EventOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, startsAt])
+  @@index([tenantId, reminderAt])
+}
+
+model WhatsappTemplate {
+  id               String   @id @default(cuid())
+  tenantId         String
+  providerTemplateId String?
+  name             String
+  language         String   @default("tr")
+  category         String   @default("marketing")
+  status           String   @default("draft")
+  body             String
+  variables        Json     @default("[]")
+  buttons          Json     @default("[]")
+  ownerUserId      String?
+  rejectionReason  String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  campaigns Campaign[]
+
+  @@unique([tenantId, name, language])
+  @@index([tenantId, status])
+}
+
+model Campaign {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  templateId  String
+  status      String   @default("draft")
+  scheduledAt DateTime?
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdById String?
+  audience    Json     @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant     Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  template   WhatsappTemplate @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  recipients CampaignRecipient[]
+
+  @@index([tenantId, status, scheduledAt])
+}
+
+model CampaignRecipient {
+  id          String   @id @default(cuid())
+  tenantId    String
+  campaignId  String
+  contactId   String
+  status      String   @default("queued")
+  attempts    Int      @default(0)
+  nextAttemptAt DateTime?
+  sendingAt   DateTime?
+  externalMessageId String?
+  error       String?
+  sentAt      DateTime?
+  deliveredAt DateTime?
+  readAt      DateTime?
+  clickedAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  contact  Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, contactId])
+  @@index([tenantId, status, nextAttemptAt])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  tenantId    String
+  actorUserId String?
+  action      String
+  entityType  String
+  entityId    String?
+  before      Json?
+  after       Json?
+  createdAt   DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  actor  User? @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, entityType, entityId])
+}
+
+model IntegrationConnection {
+  id                String   @id @default(cuid())
+  tenantId          String
+  provider          String
+  encryptedConfig   String
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, provider])
+}
+
+model KnowledgeDocument {
+  id             String           @id @default(cuid())
+  tenantId       String
+  title          String
+  content        String
+  sourceFilename String?
+  mimeType       String?
+  // Keep existing seeded/imported documents visible. New uploads explicitly start
+  // in `processing` in the API while their embeddings are generated.
+  status         String           @default("ready")
+  errorMessage   String?
+  embeddingModel String?
+  embeddingIndexId String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  tenant Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  embeddingIndex KnowledgeIndex? @relation(fields: [embeddingIndexId], references: [id], onDelete: SetNull)
+  chunks KnowledgeChunk[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, embeddingIndexId])
+}
+
+model KnowledgeIndex {
+  id         String   @id @default(cuid())
+  tenantId   String
+  provider   String
+  model      String
+  dimensions Int
+  version    String
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  tenant    Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  documents KnowledgeDocument[]
+  chunks    KnowledgeChunk[]
+
+  @@unique([tenantId, provider, model, dimensions, version])
+  @@index([tenantId, isActive])
+}
+
+model KnowledgeChunk {
+  id         String   @id
+  tenantId   String
+  documentId String
+  indexId    String
+  content    String
+  tokenCount Int
+  metadata   Json     @default("{}")
+  embedding  Unsupported("vector")
+  createdAt  DateTime @default(now())
+
+  tenant   Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  document KnowledgeDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  index    KnowledgeIndex    @relation(fields: [indexId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, documentId])
+  @@index([tenantId, indexId, documentId])
 }
 
 model UsageEvent {

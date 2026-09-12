@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("owner@demo.com");
-  const [password, setPassword] = useState("Demo1234!");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [locale, setLocale] = useState<"tr" | "en">("tr");
@@ -18,7 +18,7 @@ export default function LoginPage() {
     const res = await fetch("/api/auth", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email: email.trim(), password }),
     });
     setLoading(false);
     if (!res.ok) {
@@ -35,11 +35,11 @@ export default function LoginPage() {
       <div className="relative w-full max-w-md rounded-2xl border border-white/10 bg-white/95 p-8 shadow-2xl backdrop-blur">
         <div className="mb-6 flex items-start justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-black tracking-tight text-slate-900">OmniCRM</h1>
+            <h1 className="text-2xl font-black tracking-tight text-slate-900">EA Global Water</h1>
             <p className="mt-1 text-sm text-slate-500">
               {locale === "tr"
-                ? "Omnichannel AI Lead Platform — Demo"
-                : "Omnichannel AI Lead Platform — Demo"}
+                ? "Su Arıtma CRM"
+                : "Water Treatment CRM"}
             </p>
           </div>
           <button
@@ -80,11 +80,6 @@ export default function LoginPage() {
                 : "Sign in"}
           </button>
         </form>
-        <p className="mt-4 rounded-lg bg-slate-50 p-3 text-xs text-slate-500">
-          {locale === "tr"
-            ? "Demo: owner@demo.com / Demo1234! (admin@demo.com, agent@demo.com)"
-            : "Demo: owner@demo.com / Demo1234! (admin@demo.com, agent@demo.com)"}
-        </p>
       </div>
     </div>
   );

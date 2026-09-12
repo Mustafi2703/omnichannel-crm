@@ -1,0 +1,7 @@
+.git
+.next
+.npm-cache
+node_modules
+.env
+.codex
+graphify-out

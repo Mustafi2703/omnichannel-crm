@@ -49,7 +49,7 @@ async function main() {
   });
 
   const passwordHash = await bcrypt.hash("Demo1234!", 10);
-  const [owner, admin, agent] = await Promise.all([
+  const [, , agent] = await Promise.all([
     prisma.user.create({
       data: {
         tenantId: tenant.id,

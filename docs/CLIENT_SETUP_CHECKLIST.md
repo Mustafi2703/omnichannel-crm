@@ -73,11 +73,17 @@ Inside the app you will see **daily cost, cost per lead, and margin** so these s
 | ☐ | Cloudflare | Account for DNS + SSL |
 | ☐ | OpenAI | Company account + billing + **monthly cap $40–80** + API key |
 | ☐ | Email | Resend account (we will send DNS records) |
-| ☐ | Users | Owner, admins, sales agents (name, email, role) |
+| ◐ | Users | Three initial admin email addresses received; still need each person’s name, role, and a secure invite/password-delivery method. |
 | ☐ | Knowledge | Product FAQs, brochures, approved answers |
 | ☐ | AiSensy | Company account + WhatsApp number decision |
 | ☐ | Google Ads | Account access for lead tracking |
 | ☐ | Deal values | Agree how you will enter expected / won deal amounts (for margin) |
+
+## EA Global Water staging handoff
+
+- Staging hostname supplied: `staging-crm.eaglobalwater.com` (Cloudflare proxy enabled).
+- The source material includes pipeline, SLA, and AI requirements. The application now has tenant-scoped operations settings for the supplied 15-minute unassigned, 30-minute first-call, and 3-hour no-call SLA rules.
+- The supplied product content must be reviewed before live AI indexing. Use `docs/client-content/EAGLOBALWATER_SAFE_KNOWLEDGE_BASE.md` as the safe draft, not the unreviewed source text.
 
 **Share passwords/API keys only via a password vault (1Password / Bitwarden), not chat or email.**
 

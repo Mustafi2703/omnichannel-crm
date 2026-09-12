@@ -7,8 +7,11 @@ import {
   logWhatsappUsage,
 } from "@/lib/aisensy";
 import { generateBotReply, logAiUsage } from "@/lib/ai";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
+  const limit = await rateLimit(`aisensy:${clientIp(req)}`, 120);
+  if (!limit.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429, headers: { "Retry-After": String(limit.retryAfter) } });
   const raw = await req.text();
   const signature =
     req.headers.get("x-aisensy-signature") ||
@@ -141,6 +144,8 @@ export async function POST(req: Request) {
           bodyText: ai.reply,
           externalMessageId: send.externalMessageId,
           aiMeta: { model: ai.usedModel, handoff: ai.handoff, demo: send.demo },
+          deliveryStatus: send.ok ? "sent" : "failed",
+          deliveryError: send.ok ? undefined : send.error || "WhatsApp delivery failed",
         },
       });
 

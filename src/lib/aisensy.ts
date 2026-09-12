@@ -85,17 +85,56 @@ export async function sendAisensyText(params: {
   }
 }
 
-export async function logWhatsappUsage(tenantId: string, outboundCount = 1) {
+/**
+ * The template endpoint is kept separate because providers commonly require a
+ * different payload/URL from free-form session messages. No free-form fallback
+ * is permitted when the WhatsApp service window is closed.
+ */
+export async function sendAisensyTemplate(params: { to: string; name: string; language: string; providerTemplateId?: string | null }): Promise<{ ok: boolean; externalMessageId?: string; demo?: boolean; error?: string }> {
+  const apiKey = process.env.AISENSY_API_KEY;
+  const apiUrl = process.env.AISENSY_TEMPLATE_API_URL;
+  if (!apiKey && !apiUrl) {
+    return { ok: true, externalMessageId: `demo-wa-template-${Date.now()}`, demo: true };
+  }
+  if (!apiKey || !apiUrl) return { ok: false, error: "AISENSY_TEMPLATE_API_URL and AISENSY_API_KEY are required for approved template sends" };
+  try {
+    const response = await fetch(apiUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        to: params.to,
+        type: "template",
+        template: { name: params.providerTemplateId || params.name, language: { code: params.language } },
+      }),
+    });
+    if (!response.ok) return { ok: false, error: await response.text() };
+    const data = (await response.json().catch(() => ({}))) as { id?: string; messageId?: string };
+    return { ok: true, externalMessageId: data.id || data.messageId || `wa-template-${Date.now()}` };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "template send failed" };
+  }
+}
+
+export function isAisensyTemplateDeliveryConfigured() {
+  return Boolean(process.env.AISENSY_API_KEY && process.env.AISENSY_TEMPLATE_API_URL);
+}
+
+export async function logWhatsappUsage(
+  tenantId: string,
+  outboundCount = 1,
+  details?: { eventType?: string; meta?: Record<string, string | number | boolean | null> },
+) {
   const card = await prisma.rateCard.findUnique({ where: { tenantId } });
   const unit = card?.whatsappMsg ?? 0.005;
   await prisma.usageEvent.create({
     data: {
       tenantId,
       category: "whatsapp",
-      eventType: "outbound",
+      eventType: details?.eventType || "outbound",
       quantity: outboundCount,
       unitCost: unit,
       totalCost: Number((unit * outboundCount).toFixed(4)),
+      meta: details?.meta,
     },
   });
 }

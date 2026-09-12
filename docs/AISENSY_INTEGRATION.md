@@ -32,6 +32,8 @@ If `AISENSY_API_KEY` / `AISENSY_API_URL` are empty:
 4. Set Render/env:
    - `AISENSY_API_KEY`
    - `AISENSY_API_URL` (from AiSensy docs for your plan)
+   - `AISENSY_TEMPLATE_API_URL` (the approved-template send endpoint for the
+     client plan; this may differ from the free-form endpoint)
    - `AISENSY_WEBHOOK_SECRET`
    - `DEFAULT_TENANT_SLUG=demo-sirket` (or client slug)
 5. In AiSensy dashboard, set webhook URL:
@@ -39,7 +41,9 @@ If `AISENSY_API_KEY` / `AISENSY_API_URL` are empty:
    https://<your-app>.onrender.com/api/webhooks/aisensy
    ```
 6. Send a test WhatsApp message → appears in **Inbox** (channel `whatsapp`)
-7. Reply from Inbox → outbound via AiSensy  
+7. Reply from Inbox → outbound via AiSensy. For a conversation older than 24
+   hours, select an approved template in Inbox and verify it uses the template
+   endpoint rather than the free-form text endpoint.
 8. Confirm `/api/health` shows `"aisensyConfigured": true`
 
 ## Local webhook test
@@ -77,7 +81,10 @@ Adjust `parseAisensyWebhook` if AiSensy’s live payload differs (keep normaliza
 
 ## Production notes
 
-- Prefer template messages outside the 24h session window (AiSensy templates)  
+- The Inbox enforces templates outside the 24h session window. Configure
+  `AISENSY_TEMPLATE_API_URL` and verify the provider's exact payload with the
+  client account before production; the adapter sends `type: "template"` with
+  the provider template ID/name and language.
 - Log Meta/AiSensy message costs into `usage_events` (already hooked for outbound)  
 - Keep provider behind `WhatsAppProvider`-style functions for future Wati/360dialog swap  
 

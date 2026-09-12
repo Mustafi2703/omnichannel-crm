@@ -5,8 +5,8 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin", "latin-ext"] });
 
 export const metadata: Metadata = {
-  title: "OmniCRM | Omnichannel AI Lead Platform",
-  description: "LeadGen-class omnichannel CRM demo — inbox, pipeline, AI, costs",
+  title: "EA Global Water | Water Treatment CRM",
+  description: "EA Global Water customer conversations, pipeline, and AI assistance",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

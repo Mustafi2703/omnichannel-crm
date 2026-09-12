@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useLocale } from "@/components/ClientProviders";
 import { t } from "@/lib/i18n";
 import { formatMoney, formatDate } from "@/lib/utils";
+import { getClientJson, invalidateClientJson } from "@/lib/client-json-cache";
 
 type Stage = { id: string; key: string; name: string; nameTr: string };
 type LeadRow = {
@@ -24,24 +25,24 @@ export default function LeadsPage() {
   const [stages, setStages] = useState<Stage[]>([]);
   const [q, setQ] = useState("");
 
-  async function load(query = q) {
-    const res = await fetch(`/api/leads?q=${encodeURIComponent(query)}`);
-    const data = await res.json();
+  const load = useCallback(async (query = "") => {
+    const data = await getClientJson<{ leads?: LeadRow[]; stages?: Stage[] }>(`/api/leads?q=${encodeURIComponent(query)}`);
     setLeads(data.leads || []);
     setStages(data.stages || []);
-  }
+  }, []);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
   async function moveStage(id: string, stageId: string) {
-    await fetch("/api/leads", {
+    await fetch(`/api/leads/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, stageId }),
     });
-    load();
+    invalidateClientJson("/api/leads");
+    load(q);
   }
 
   return (
