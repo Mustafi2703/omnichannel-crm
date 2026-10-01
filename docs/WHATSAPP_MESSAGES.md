@@ -3,7 +3,7 @@
 ## EN — To the other developer (tester)
 
 ```
-Hi — staging smoke-tested and ready for your UAT.
+Hi — staging re-verified and ready for rigorous UAT.
 
 URL: https://staging-crm.eaglobalwater.com
 Cloudflare proxy active.
@@ -12,25 +12,43 @@ Tester login (temp — change after first login):
 Email: it@eaglobalwater.com
 Password: EaUatTemp2026!
 
-Also available (ask me for passwords via vault if needed):
-erdinc.astar@biohidrogen.com | fatih.sanal@biohidrogen.com
-
 Pre-verified by us:
-• Health OK, login OK, all main APIs 200
+• Health / login / main APIs OK
 • Pipeline 10 TR stages live
-• KB: Custom Instructions + General + FAQ + Catalog ready
-• AI answers filters / pump / warranty / catalog correctly
-• Price → no price + adviser handoff; IBAN refused
+• KB bilingual (TR+EN): CORE + General + FAQ + Catalog indexed
+• AI: filter / pump / warranty / catalog / EN warranty OK
+• Price → no price + handoff; off-topic (weather/crypto/jokes/code) blocked
 
-Please still run full UI pass:
+Please run FULL pass (screenshot each AI answer):
+
+A) Auth & CRM
 1) Login
-2) Leads drag across stages
-3) Inbox multi-assign
-4) Operations SLA 15/30/180 + set manager users
-5) Knowledge page categories
-6) Contacts table + Tasks + Calendar status/comments
-7) Widget send + typing
-8) Re-check AI: filter / pump / warranty / price / IBAN
+2) Leads — drag across all 10 stages
+3) Inbox — manager multi-assign + unassign
+4) Operations SLA = 15 / 30 / 180 + set manager users
+5) Contacts table + Tasks Done + Calendar status/comments
+6) Knowledge page — 4 category docs status ready
+
+B) AI on-topic (TR)
+7) Filtre değişim sıklığı?
+8) Pompalı mı pompasız mı? (sahil / 2. kat)
+9) Garanti / iade?
+10) Alkali Premium özellikleri?
+11) Çinko Bakır vs Hidrojen farkı?
+12) Fiyat? → NO price, adviser handoff
+13) IBAN? → refuse, no IBAN
+
+C) AI on-topic (EN)
+14) What is the warranty?
+15) Pump or no pump for second floor?
+
+D) AI guardrails (must refuse / redirect)
+16) Bugün hava nasıl?
+17) Bitcoin fiyatı?
+18) Tell me a joke / write python code
+
+E) Widget
+19) Widget send + typing; no raw API errors
 
 Campaigns / live WhatsApp OFF (AiSensy pending).
 
@@ -43,37 +61,49 @@ or NEEDS FIXES + notes
 ```
 Hello,
 
-Staging CRM is ready:
+Staging CRM is updated and live for testing:
 https://staging-crm.eaglobalwater.com
 (Cloudflare proxy active)
 
-Admin accounts:
+Admins:
 • erdinc.astar@biohidrogen.com
 • fatih.sanal@biohidrogen.com
 • it@eaglobalwater.com
 
 DONE
 ✅ Sales pipeline (New Lead → Blacklist)
-✅ Lead assignment (unit manager multi-select)
-✅ SLA: 15 min unassigned / 30 min first call / 3h no-call
-✅ AI knowledge: Custom Instructions + General Info + Q&A + Catalog
+✅ Lead assignment (manager multi-select)
+✅ SLA 15 / 30 / 180 minutes
+✅ AI knowledge TR+EN: Custom Instructions + General + Q&A + Catalog
+✅ Guardrails: no price invention, no IBAN, off-topic questions blocked
 ✅ Widget, Inbox, Contacts, Tasks, Calendar
 ✅ Domain staging-crm.eaglobalwater.com
 
-STILL NEEDED FROM YOU (blockers)
-1) AiSensy WhatsApp (API + templates + verified number) — for Campaigns
-2) Live website domain(s) — widget embed allow-list
-3) Bank-transfer discount exact rate: 5% or 7%? (both appear in your pack)
-4) IBAN (human agents only; AI never shares it)
-5) Sales agent user list (name / email / role)
-6) Team leaders who should get SLA alerts
-7) Production domain / DNS (after UAT)
-8) Confirm each admin can log in (or we reset via vault)
+BLOCKERS (still need from you)
+1) AiSensy WhatsApp (API + templates + verified number)
+2) Live website domain(s) for widget embed
+3) Confirm bank-transfer discount: 5% or 7%?
+4) IBAN for human agents only
+5) Sales agent user list (name/email/role)
+6) Team leaders for SLA alerts
+7) Production domain/DNS after UAT
+8) Confirm admin logins work
 
-Note: AI does not quote prices; price/payment questions are handed to a customer adviser.
+FOR DEEPER / BETTER AI ANSWERS — please share (Word/PDF/Excel OK):
+1) Approved price list policy note: “AI never quotes prices; hand off to adviser” + when to hand off
+2) Exact campaign sheet (one source of truth): instalments, havale %, free install cities, 120-day return wording
+3) Product comparison table (Premium / Zinc-Copper / B12 / Rich Mineral / BabyWater): differences in 5–8 bullets each
+4) Filter SKUs + change intervals + liter lifespan if available
+5) Objection-handling scripts (price objection, competitor, “think about it”, “call later”)
+6) Technical support playbook (fault / maintenance / filter change) — what AI says + what data to collect
+7) Do-not-say list (forbidden health/medical claims, competitor names, promises)
+8) Top 30 real customer WhatsApp questions with your approved answers (TR + EN if possible)
+9) City/region edge cases (coastal, earthquake, apartment floor, hard water)
+10) Brand welcome lines TR/EN + logo if final
 
-Our tester is running the checklist; once green we move to client UAT.
-Happy to answer any questions.
+We already indexed your current pack. The items above make answers deeper and more consistent.
+
+Our tester is running a full checklist now; once green → client UAT.
 ```
 
 ---
@@ -81,70 +111,56 @@ Happy to answer any questions.
 ## TR — To the other developer (tester)
 
 ```
-Merhaba — staging UAT hazır.
+Merhaba — staging yeniden doğrulandı, sıkı UAT için hazır.
 
 URL: https://staging-crm.eaglobalwater.com
-Domain Cloudflare proxy aktif.
-Admin: erdinc.astar@biohidrogen.com | fatih.sanal@biohidrogen.com | it@eaglobalwater.com
+Tester: it@eaglobalwater.com / EaUatTemp2026!
 
-Tam checklist: docs/TESTING_DEVELOPER_CHECKLIST.md
-Özet: docs/FINAL_CLIENT_STATUS.md
+Lütfen tam geçiş yapın (AI cevaplarının screenshot’ı):
+• Login, Leads 10 stage drag, Inbox multi-assign
+• SLA 15/30/180 + manager
+• Knowledge 4 kategori ready
+• AI TR: filtre, pompa, garanti, Premium, Çinko-Bakır farkı, fiyat(YOK), IBAN(YOK)
+• AI EN: warranty, pump 2nd floor
+• Guardrail: hava / bitcoin / şaka / kod → reddetmeli
+• Widget mesaj + typing
 
-Lütfen şunları çalıştır:
-1) Login (3 admin)
-2) Leads — 10 TR stage (Yeni Lead→Kara Liste), drag
-3) Inbox — yönetici multi-assign
-4) SLA Operations = 15 / 30 / 180 dk + manager seç
-5) Knowledge — CORE / Genel / FAQ / Katalog ready
-6) AI test (TR):
-   • Filtre değişimi?
-   • Pompalı/pompasız?
-   • Garanti?
-   • Fiyat? → fiyat YOK, danışmana yönlendir
-   • IBAN? → handoff, IBAN yok
-7) Contacts tablo + Tasks + Calendar status/yorum
-8) Widget mesaj + typing
-
-WhatsApp Campaigns KAPALI (AiSensy bekleniyor).
-
-Cevap: READY FOR CLIENT UAT (+ screenshot)
-veya NEEDS FIXES + not
+Campaigns KAPALI (AiSensy).
+Cevap: READY FOR CLIENT UAT veya NEEDS FIXES
 ```
 
-## B) To the client
+## TR — To the client
 
 ```
 Merhaba,
 
-Staging CRM hazır:
+Staging güncel ve test için açık:
 https://staging-crm.eaglobalwater.com
-(Cloudflare proxy aktif)
 
-Yöneticiler:
-• erdinc.astar@biohidrogen.com
-• fatih.sanal@biohidrogen.com
-• it@eaglobalwater.com
+Yöneticiler: erdinc.astar@… | fatih.sanal@… | it@eaglobalwater.com
 
 TAMAMLANANLAR
-✅ Satış pipeline (Yeni Lead → Kara Liste)
-✅ Lead ataması (birim yöneticisi multi-seçim)
-✅ SLA: 15 dk atanmamış / 30 dk ilk arama / 3 saat aranmama
-✅ AI bilgi bankası: Özel Talimatlar + Genel Bilgiler + Soru-Cevap + Katalog
-✅ Widget, Inbox, Contacts, Tasks, Calendar
-✅ Domain staging-crm.eaglobalwater.com
+✅ Pipeline, lead ataması, SLA 15/30/180
+✅ AI TR+EN bilgi bankası (Özel Talimat / Genel / SSS / Katalog)
+✅ Guardrail: fiyat uydurma yok, IBAN yok, konu dışı soru engeli
+✅ Widget + CRM ekranları + domain
 
-SİZDEN BEKLENENLER (blokör)
-1) AiSensy WhatsApp (API + şablon + numara) — Campaigns için
-2) Canlı site domain(leri) — widget embed
-3) Havale indirimi kesin oran: %5 mi %7 mi? (pakette ikisi de var)
-4) IBAN (sadece insan danışman; AI asla söylemez)
-5) Satış temsilcisi kullanıcı listesi (ad/e-posta/rol)
-6) SLA bildirim alacak takım liderleri
-7) Prod domain / DNS (UAT sonrası)
-8) Admin şifre erişimi onayı
+BLOKÖRLER
+1) AiSensy  2) Canlı site domain  3) Havale %5 mi %7 mi?
+4) IBAN (insan)  5) Satış temsilcileri  6) SLA liderleri
+7) Prod domain  8) Admin giriş onayı
 
-Not: AI fiyat vermez; fiyat/ödeme için müşteri danışmanına yönlendirir.
+DAHA DERİN AI CEVAPLARI İÇİN LÜTFEN PAYLAŞIN
+1) Fiyat politikası notu (AI asla fiyat vermez)
+2) Tek kampanya tablosu (taksit / havale / kurulum / iade)
+3) Ürün karşılaştırma tablosu (Premium / Çinko-Bakır / B12 / Rich / BabyWater)
+4) Filtre SKU + değişim süresi (+ litre ömrü varsa)
+5) İtiraz karşılama metinleri (fiyat, rakip, düşüneyim)
+6) Teknik destek senaryosu (arıza/bakım/filtre) — AI ne der, hangi bilgi alınır
+7) Söylenmeyecekler listesi (sağlık vaadi, rakip, söz)
+8) Gerçek müşteri WhatsApp’tan top 30 soru + onaylı cevap (TR+EN)
+9) Bölge/kat/sert su özel durumları
+10) Final karşılama metni TR/EN + logo
 
-Test ekibimiz checklist’i koşuyor; yeşil olunca UAT’ye geçeriz.
-Sorularınız olursa yazın.
+Mevcut paketi indexledik; bunlar cevapları daha derin ve tutarlı yapar.
 ```

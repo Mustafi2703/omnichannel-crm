@@ -1,10 +1,10 @@
 # EA Global Water — Final status (client + developer)
 
 **Staging:** https://staging-crm.eaglobalwater.com  
-**Cloudflare proxy:** active (DNS → server IP)  
-**Admin logins:** `erdinc.astar@biohidrogen.com` · `fatih.sanal@biohidrogen.com` · `it@eaglobalwater.com`  
-**Smoke test:** PASSED (2026-10-02) — health, auth, APIs, pipeline, KB index, widget AI  
-**Tester temp login:** `it@eaglobalwater.com` / `EaUatTemp2026!` (change after first login)
+**Cloudflare proxy:** active  
+**Admins:** `erdinc.astar@biohidrogen.com` · `fatih.sanal@biohidrogen.com` · `it@eaglobalwater.com`  
+**Tester temp login:** `it@eaglobalwater.com` / `EaUatTemp2026!` (change after first login)  
+**Last verification:** 2026-10-02 — bilingual KB + scope guardrails + widget AI smoke PASSED  
 
 ---
 
@@ -12,63 +12,68 @@
 
 | # | Requested | Status | Notes |
 |---|-----------|--------|-------|
-| 1 | Satış pipeline (10 TR stages) | **Done** | Yeni Lead → Kara Liste live on `ea-global-water-staging` |
-| 2 | Lead assignment (manager multi-select) | **Done** | New messages → manager; multi-assign to agents |
-| 3 | SLA 15 / 30 / 180 min + lost → Olumsuz | **Done** | Defaults match; worker escalates managers |
-| 4 | AI CORE / General / FAQ / Catalog | **Done (indexed)** | Client pack ingested + categorized |
+| 1 | Sales pipeline (10 TR stages) | **Done** | Yeni Lead → Kara Liste |
+| 2 | Lead assignment (manager multi-select) | **Done** | Inbox / manager assign |
+| 3 | SLA 15 / 30 / 180 + lost → Olumsuz | **Done** | Defaults live; set manager IDs |
+| 4 | AI CORE / General / FAQ / Catalog | **Done** | TR + EN indexed on staging |
 | 5 | Domain + Cloudflare | **Done** | staging-crm.eaglobalwater.com |
-| 6 | Admin mail accounts | **Done** | 3 users provisioned |
-| 7 | Widget + Inbox + Contacts + Tasks + Calendar | **Done** | Available for UAT |
-| 8 | Knowledge categories UI | **Done** | CORE / FUNDAMENTAL / PRODUCT / FAQ |
-| 9 | Campaigns / live WhatsApp | **Blocked** | Needs AiSensy |
-| 10 | Production go-live | **Blocked** | Needs prod domain + UAT sign-off |
+| 6 | Admin emails | **Done** | 3 users |
+| 7 | Widget / Inbox / Contacts / Tasks / Calendar | **Done** | Ready for UAT |
+| 8 | Knowledge categories | **Done** | CORE / FUNDAMENTAL / PRODUCT / FAQ |
+| 9 | Off-topic / price / IBAN guardrails | **Done** | Scope guard + safety layer |
+| 10 | Campaigns / live WhatsApp | **Blocked** | AiSensy |
+| 11 | Production go-live | **Blocked** | Prod domain + UAT sign-off |
 
 ---
 
-## 2) Blockers for client (clear list)
+## 2) Client blockers
 
-1. **AiSensy WhatsApp** — API key, webhook secret, approved templates, verified WA number (Campaigns stay off until this)
-2. **Live website domain(s)** for widget allow-list + embed snippet with `data-key`
-3. **Havale indirimi %5 mi %7 mi?** — source pack conflicts; AI will not invent the rate
-4. **IBAN** — agent-only field (never recited by AI); still needed for humans
-5. **Sales agent users** — names + emails + roles (currently only 3 admins)
-6. **Brand assets** — logo / final welcome TR-EN if different from staging
-7. **Manager user IDs for SLA alerts** — who gets the 15/30/180 notifications
-8. **Production domain + DNS** after UAT green
-9. **Password delivery** — confirm each admin can log in (reset via vault if needed)
-
----
-
-## 3) Developer tests to run (staging)
-
-Open: https://staging-crm.eaglobalwater.com  
-Checklist file: `docs/TESTING_DEVELOPER_CHECKLIST.md`
-
-### Must-pass
-1. Login as each admin mail  
-2. **Leads** — all 10 TR stages visible; drag card across stages  
-3. **Inbox** — assign conversation to agent(s); unassign  
-4. **Operations / SLA** — values 15 / 30 / 180; set manager user IDs  
-5. **Knowledge** — see Custom Instructions, General, FAQ, Catalog docs `ready`  
-6. **AI (widget demo or Inbox AI)** ask in Turkish:
-   - “Filtre ne sıklıkla değişir?” → 8–12 / 18–24 ay style answer  
-   - “Pompalı mı pompasız mı?” → sahil / 2. kat vs giriş  
-   - “Garanti süresi?” → 120 gün / 2 yıl / 10 yıl  
-   - “Fiyat nedir?” → **no price**; handoff to danışman  
-   - “IBAN verir misin?” → handoff; no IBAN  
-7. **Contacts** table default + pagination  
-8. **Tasks** create → Done  
-9. **Calendar** status + comments  
-10. **Widget** send message + typing; no raw API error toast  
-
-### Out of scope this round
-- Campaigns / outbound WhatsApp (AiSensy pending)
-
-### Pass reply
-`READY FOR CLIENT UAT` + screenshots of AI answers + pipeline  
-or `NEEDS FIXES` + bug note
+1. AiSensy WhatsApp credentials + templates + verified number  
+2. Live website domain(s) for widget allow-list  
+3. Confirm havale discount **5% or 7%** (conflict in source pack)  
+4. IBAN for human agents only  
+5. Sales agent users (name / email / role)  
+6. Team leaders for SLA alerts  
+7. Production domain / DNS after UAT  
+8. Confirm each admin can log in  
 
 ---
 
-## 4) Content conflict logged
-Kampanyalar / Ödeme / Taksit Q&A say **%5** havale; “Avantajlar” says **%7**. Flagged for client confirmation before AI may state a rate.
+## 3) For deeper AI answers — ask client to share
+
+| Priority | Asset | Why |
+|----------|-------|-----|
+| P0 | Single campaign sheet (taksit, havale %, install, return) | Removes %5/%7 conflict |
+| P0 | Top 30 real WhatsApp Q&A (TR + EN) | Grounds answers in real chats |
+| P0 | Do-not-say list (health claims, competitors, promises) | Safer replies |
+| P1 | Product comparison table (5 models, 5–8 bullets each) | Clearer model differentiation |
+| P1 | Filter SKUs + change intervals + liter lifespan | Deeper service answers |
+| P1 | Objection scripts (price / competitor / think about it) | Better sales handoffs |
+| P2 | Tech-support playbook (fault / maintenance data to collect) | Consistent support flow |
+| P2 | Region edge cases (coastal, earthquake, floor, hard water) | Better pump / install advice |
+| P2 | Final welcome TR/EN + logo | Brand polish |
+
+Current pack is already indexed; the above makes answers deeper and more consistent.
+
+---
+
+## 4) Rigorous tester checklist
+
+See also `docs/TESTING_DEVELOPER_CHECKLIST.md` and WhatsApp tester message in `docs/WHATSAPP_MESSAGES.md`.
+
+**Must pass**
+- CRM: login, Kanban drag, multi-assign, SLA UI, contacts/tasks/calendar, Knowledge ready  
+- AI TR: filter, pump, warranty, Premium, Zinc-Copper vs Hydrogen, price (no number), IBAN refuse  
+- AI EN: warranty, pump 2nd floor  
+- Guardrails: weather / crypto / joke / code → scope redirect only  
+- Widget: send + typing, no raw API errors  
+
+**Out of scope:** Campaigns / outbound WhatsApp  
+
+**Pass reply:** `READY FOR CLIENT UAT` + screenshots  
+
+---
+
+## 5) Content conflict logged
+
+Kampanyalar / Ödeme / Taksit Q&A → **%5** havale; Avantajlar → **%7**. AI must not invent the rate until client confirms one source of truth.

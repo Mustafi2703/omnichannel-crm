@@ -17,7 +17,20 @@ export type AiReplyResult = {
   sources?: KnowledgeSource[];
 };
 
-type ReplySafety = { forceHandoff: boolean; suppressHandoff?: boolean; replacement?: string; appendPolicyQualifier?: boolean; appendInstallationQualifier?: boolean };
+type ReplySafety = {
+  forceHandoff: boolean;
+  suppressHandoff?: boolean;
+  replacement?: string;
+  appendPolicyQualifier?: boolean;
+  appendInstallationQualifier?: boolean;
+  offTopic?: boolean;
+};
+
+const DOMAIN_SCOPE =
+  /\b(?:su|water|arıt|arit|purif|filter|filtre|biohidrogen|bio.?hidrogen|ea global|alkali|orp|hidrojen|hydrogen|pompa|pump|garanti|warranty|kurulum|install|cihaz|device|mineral|çinko|cinko|bakır|bakir|zinc|copper|b12|iade|refund|fiyat|price|iban|nsf|sgs|katalog|catalog|ürün|urun|product|tezgah|baby|canlı|canli|ölü su|olu su|seramik|zeolit|turmalin|maifan|atık|atik|taksit|havale|kargo|orijinal|bayilik|franchise|kampanya|kampany|memnuniyet|danışman|danisman|müşteri|musteri|servis|service|filtreleme|ph|antioksidan|antioxidant|sahil|coastal|deprem|earthquake)/i;
+
+const OBVIOUS_OFF_TOPIC =
+  /\b(?:bitcoin|kripto|crypto|stock market|borsa hissesi|hava(?:\s+durumu)?|weather|yemek tarifi|recipe for|football score|futbol maç|maç skoru|siyaset|politics|seçim sonucu|write (?:me )?(?:code|python|javascript|sql)|kod yaz|ödev yap|homework|şaka anlat|tell (?:me )?a joke|netflix|film öner|spam|hack|jailbreak|ignore (?:your|all) instructions)/i;
 
 function normaliseKnowledgeQuery(value: string) {
   let normalised = value
@@ -28,15 +41,44 @@ function normaliseKnowledgeQuery(value: string) {
     .replace(/\btomorow\b/gi, "tomorrow");
   // Expand the short pump question with the approved technical concepts so
   // retrieval remains auditable even when the visitor uses only "second floor".
-  if (/\b(pump|pompa)\b/i.test(normalised)) {
+  if (/\b(pump|pompa)/i.test(normalised)) {
     normalised += " pump pompa second floor ikinci kat coastal kıyı earthquake deprem";
   }
   return normalised;
 }
 
+function isBriefAck(message: string) {
+  return /^(?:yes|no|evet|hayır|hayir|merhaba|selam|hello|hi|hey|teşekkür(?:ler)?|tesekkur(?:ler)?|thanks|thank you|rica ederim|ok|tamam|günaydın|gunaydin|iyi akşamlar|iyi aksamlar)$/i.test(
+    message.trim(),
+  );
+}
+
+/** Reject random / out-of-scope chats; keep Biohidrogen water-treatment only. */
+export function isOffTopicMessage(message: string) {
+  const text = normaliseKnowledgeQuery(message).toLocaleLowerCase("tr-TR").trim();
+  if (!text || isBriefAck(text)) return false;
+  if (OBVIOUS_OFF_TOPIC.test(text)) return true;
+  if (DOMAIN_SCOPE.test(text)) return false;
+  // Short vague interest ("bilgi alabilir miyim?") stays in scope.
+  if (/\b(bilgi|info|yardım|yardim|help|destek|support|ürün|urun|product|cihaz)\b/i.test(text) && text.split(/\s+/).length <= 10) {
+    return false;
+  }
+  // Any other multi-word ask without product domain is out of scope.
+  return text.split(/\s+/).length >= 3;
+}
+
 function replySafety(message: string, locale: "tr" | "en"): ReplySafety {
   const text = normaliseKnowledgeQuery(message).toLocaleLowerCase("tr-TR");
   const isTurkish = locale === "tr";
+  if (isOffTopicMessage(message)) {
+    return {
+      forceHandoff: false,
+      offTopic: true,
+      replacement: isTurkish
+        ? "Ben yalnızca Biohidrogen / EA Global su arıtma ürünleri ve hizmetleri hakkında yardımcı olabilirim. Cihaz, filtre, kurulum veya canlı su hakkında sorabilirsiniz."
+        : "I can only help with Biohidrogen / EA Global water-treatment products and services. Please ask about devices, filters, installation, or living water.",
+    };
+  }
   const human = /\b(insan|temsilci|human|agent|adviser|advisor|sales)\b/.test(text);
   const commercial = /\b(fiyat|price|teklif|quote|indirim|discount|taksit|payment|ödeme|delivery|teslimat|iban|banka|bank account|havale|eft)\b/.test(text);
   // Do not treat an ordinary "water-treatment device" product question as a
@@ -75,12 +117,11 @@ function replySafety(message: string, locale: "tr" | "en"): ReplySafety {
         : "I cannot provide medical advice or promise health outcomes. Please consult a healthcare professional; I am connecting you with a customer adviser for product information.",
     };
   }
+  // Pump: keep KB answer when available; only force adviser confirmation.
   if (/(pump|pompa)/.test(text)) {
     return {
       forceHandoff: true,
-      replacement: isTurkish
-        ? "Ege kıyısı veya ikinci kat gibi durumlarda pompa ihtiyacı olabilir; kesin uygunluğu tesisat ve su basıncına göre yetkili ekip teyit eder."
-        : "A pump may be needed in situations such as a coastal area or a second floor; an authorised team will confirm suitability from the plumbing and water-pressure conditions.",
+      appendPolicyQualifier: false,
     };
   }
   return {
@@ -94,7 +135,10 @@ function replySafety(message: string, locale: "tr" | "en"): ReplySafety {
 function applyReplySafety(params: { message: string; locale: "tr" | "en"; reply: string; handoff: boolean; hasSources?: boolean }) {
   const safety = replySafety(params.message, params.locale);
   let reply = safety.replacement || params.reply;
-  const briefReply = /^(?:yes|no|evet|hayır|hayir|merhaba|selam|hello|hi)$/i.test(params.message.trim());
+  const briefReply = isBriefAck(params.message);
+  if (safety.offTopic) {
+    return { reply, handoff: false };
+  }
   if (!params.hasSources && !briefReply && !safety.replacement) {
     reply = params.locale === "tr"
       ? "Bu konuda onaylı bilgiye ulaşamadım. Güncel bilgiyi teyit etmesi için sizi müşteri danışmanımıza aktarıyorum."
@@ -125,6 +169,23 @@ export async function generateBotReply(params: {
   const tenant = await prisma.tenant.findUnique({ where: { id: params.tenantId }, select: { settings: true } });
   const operations = getOperationsSettings(tenant?.settings);
   const lastUserMessage = params.history.filter((message) => message.role === "user").at(-1)?.content || "";
+  if (isOffTopicMessage(lastUserMessage)) {
+    const safe = applyReplySafety({
+      message: lastUserMessage,
+      locale: params.locale,
+      reply: "",
+      handoff: false,
+      hasSources: false,
+    });
+    return {
+      reply: safe.reply,
+      handoff: false,
+      scoreDelta: 0,
+      usedModel: "scope-guard",
+      latencyMs: Date.now() - startedAt,
+      sources: [],
+    };
+  }
   let sources: KnowledgeSource[] = [];
   let foundation = "";
   try {
@@ -147,6 +208,8 @@ export async function generateBotReply(params: {
         limit: 4,
       });
     }
+    // Drop weak matches so random questions cannot ride noisy FAQ similarity.
+    sources = sources.filter((source) => source.score >= 0.32);
   } catch (error) {
     console.error("Knowledge retrieval failed", error);
   }
@@ -156,18 +219,22 @@ export async function generateBotReply(params: {
 
   const system =
     params.locale === "tr"
-      ? `Sen bir Türkçe satış asistanısın.
+      ? `Sen Biohidrogen / EA Global su arıtma satış asistanısın.
+SADECE su arıtma cihazları, filtreler, kurulum, garanti, canlı/alkali su ve onaylı KB konuları hakkında konuş.
+Konu dışı (hava, siyaset, kod, şaka, kripto vb.) sorularda ürün kapsamına yönlendir; uydurma cevap verme.
 Önce onaylı bilgi bankasındaki somut gerçekleri söyle; ardından gerekiyorsa en fazla bir nitelendirme sorusu sor.
 Yalnızca KB'de desteklenen ürün gerçeklerini söyle; KB yeterli değilse insan desteğine yönlendir.
-Kesin fiyat, indirim, IBAN, banka, sözleşme veya teslimat sözü uydurma. İnsan istediğinde ya da fiyat/teklif/ödeme sorulduğunda handoff=true yap.
-Tıbbi tavsiye verme. Kısa, açık yanıtlar ver.
+Kesin fiyat, indirim oranı, IBAN, banka, sözleşme veya teslimat sözü uydurma. Fiyat/teklif/ödeme sorulduğunda handoff=true yap.
+Tıbbi tavsiye veya hastalık tedavi vaadi verme. Kısa, açık yanıtlar ver.
 Kullanıcı selam verirse veya kısa bir evet/hayır yanıtı yazarsa, konuşma geçmişini dikkate al. Genel selamı tekrarlama.
 ${operations.aiInstructions ? `Yönetici tarafından onaylanan ek talimatlar:\n${operations.aiInstructions}` : ""}
 JSON dön: {"reply":"...","handoff":false,"qualification":{"city":"","need":"","timeline":""},"scoreDelta":0}`
-      : `You are an English sales assistant. Always reply in English, even when the knowledge source is in another language.
+      : `You are the Biohidrogen / EA Global water-treatment sales assistant.
+ONLY discuss water-treatment devices, filters, installation, warranty, living/alkaline water, and approved KB topics.
+For off-topic requests (weather, politics, code, jokes, crypto, etc.), steer back to product scope; do not invent answers.
 When KB sources support an answer, state those facts first, then optionally ask at most one qualifying question.
 Only state product facts supported by the KB; hand off if the KB is insufficient.
-Never invent pricing, discounts, IBAN/bank details, contracts, delivery promises, or medical advice.
+Never invent pricing, discount rates, IBAN/bank details, contracts, delivery promises, or medical advice.
 If the user asks for a person, pricing/quotes, or payment/IBAN details, set handoff=true. Keep replies concise.
 For a greeting or a brief yes/no reply, use the conversation history. Do not repeat a generic greeting.
 ${operations.aiInstructions ? `Administrator-approved additional instructions:\n${operations.aiInstructions}` : ""}
