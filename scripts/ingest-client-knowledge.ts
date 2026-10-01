@@ -1,13 +1,19 @@
 import "dotenv/config";
 import { readFile } from "node:fs/promises";
 import { cleanKnowledgeText, ingestKnowledgeDocument } from "../src/lib/knowledge";
+import { isKnowledgeCategory } from "../src/lib/knowledge-categories";
 import { prisma } from "../src/lib/prisma";
 
 async function main() {
-  const [tenantSlug, sourcePath, title, replaceDocumentId] = process.argv.slice(2);
+  const [tenantSlug, sourcePath, title, categoryArg, replaceDocumentId] = process.argv.slice(2);
   if (!tenantSlug || !sourcePath || !title) {
-    throw new Error("Usage: tsx scripts/ingest-client-knowledge.ts <tenant-slug> <source-path> <title> [replace-document-id]");
+    throw new Error(
+      "Usage: tsx scripts/ingest-client-knowledge.ts <tenant-slug> <source-path> <title> [category] [replace-document-id]",
+    );
   }
+
+  const category = categoryArg || "general_information";
+  if (!isKnowledgeCategory(category)) throw new Error(`Invalid knowledge category: ${category}`);
 
   const tenant = await prisma.tenant.findUnique({ where: { slug: tenantSlug }, select: { id: true, slug: true } });
   if (!tenant) throw new Error(`Tenant not found: ${tenantSlug}`);
@@ -22,19 +28,59 @@ async function main() {
 
   const document = existing
     ? await prisma.knowledgeDocument.update({
-      where: { id: existing.id },
-      data: { title: title.slice(0, 200), content, sourceFilename: sourcePath.split("/").pop(), mimeType: "text/markdown", status: "processing", errorMessage: null },
-    })
+        where: { id: existing.id },
+        data: {
+          title: title.slice(0, 200),
+          content,
+          category,
+          sourceFilename: sourcePath.split("/").pop(),
+          mimeType: "text/markdown",
+          status: "processing",
+          errorMessage: null,
+        },
+      })
     : await prisma.knowledgeDocument.create({
-      data: { tenantId: tenant.id, title: title.slice(0, 200), content, sourceFilename: sourcePath.split("/").pop(), mimeType: "text/markdown", status: "processing" },
-    });
+        data: {
+          tenantId: tenant.id,
+          title: title.slice(0, 200),
+          content,
+          category,
+          sourceFilename: sourcePath.split("/").pop(),
+          mimeType: "text/markdown",
+          status: "processing",
+        },
+      });
 
   await ingestKnowledgeDocument(document.id, tenant.id);
   const indexed = await prisma.knowledgeDocument.findFirst({
     where: { id: document.id, tenantId: tenant.id },
-    include: { _count: { select: { chunks: true } }, embeddingIndex: { select: { provider: true, model: true, dimensions: true, version: true } } },
+    include: {
+      _count: { select: { chunks: true } },
+      embeddingIndex: { select: { provider: true, model: true, dimensions: true, version: true } },
+    },
   });
-  console.log(JSON.stringify({ tenant: tenant.slug, document: { id: indexed?.id, title: indexed?.title, status: indexed?.status, chunks: indexed?._count.chunks, index: indexed?.embeddingIndex } }, null, 2));
+  console.log(
+    JSON.stringify(
+      {
+        tenant: tenant.slug,
+        document: {
+          id: indexed?.id,
+          title: indexed?.title,
+          category: indexed?.category,
+          status: indexed?.status,
+          chunks: indexed?._count.chunks,
+          index: indexed?.embeddingIndex,
+        },
+      },
+      null,
+      2,
+    ),
+  );
 }
 
-main().catch((error) => { console.error(error); process.exitCode = 1; }).finally(async () => prisma.$disconnect());
+main()
+  .catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  })
+  .finally(async () => prisma.$disconnect());

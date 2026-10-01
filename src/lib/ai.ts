@@ -132,7 +132,7 @@ export async function generateBotReply(params: {
     foundation = always
       .map((doc, index) => `[F${index + 1}] ${doc.title}\n${doc.content}`)
       .join("\n\n")
-      .slice(0, 2_500);
+      .slice(0, 8_000);
     sources = await retrieveKnowledge({
       tenantId: params.tenantId,
       query: normaliseKnowledgeQuery(lastUserMessage),

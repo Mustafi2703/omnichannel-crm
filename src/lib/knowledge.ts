@@ -148,7 +148,7 @@ export async function loadAlwaysInjectKnowledge(tenantId: string) {
   return docs.map((doc) => ({
     documentId: doc.id,
     title: doc.title,
-    content: doc.content.slice(0, 2_000),
+    content: doc.content.slice(0, 4_000),
     score: 1,
     category: doc.category,
   }));
