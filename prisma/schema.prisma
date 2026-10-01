@@ -360,6 +360,10 @@ model CalendarEvent {
   conversationId String?
   ownerUserId    String?
   reminderAt     DateTime?
+  /// scheduled | confirmed | completed | cancelled | no_show
+  status         String   @default("scheduled")
+  /// Free-text agent notes / comments after creation
+  comments       String?
   completedAt    DateTime?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -372,6 +376,7 @@ model CalendarEvent {
 
   @@index([tenantId, startsAt])
   @@index([tenantId, reminderAt])
+  @@index([tenantId, status])
 }
 
 model WhatsappTemplate {
@@ -483,6 +488,9 @@ model KnowledgeDocument {
   content        String
   sourceFilename String?
   mimeType       String?
+  /// Client visual groups: channel_controls | custom_instructions | automation_settings |
+  /// iban_information | catalog_database | general_information | question_answer_archive
+  category       String           @default("general_information")
   // Keep existing seeded/imported documents visible. New uploads explicitly start
   // in `processing` in the API while their embeddings are generated.
   status         String           @default("ready")
@@ -497,6 +505,7 @@ model KnowledgeDocument {
   chunks KnowledgeChunk[]
 
   @@index([tenantId, status])
+  @@index([tenantId, category])
   @@index([tenantId, embeddingIndexId])
 }
 

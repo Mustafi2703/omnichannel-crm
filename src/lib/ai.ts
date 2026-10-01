@@ -1,6 +1,7 @@
 import type { ChatCompletionCreateParamsNonStreaming } from "openai/resources/chat/completions";
 import { prisma } from "./prisma";
 import { retrieveKnowledge, type KnowledgeSource } from "./knowledge";
+import { CHAT_RETRIEVAL_CATEGORIES } from "./knowledge-categories";
 import { getChatClient } from "./llm";
 import { getOperationsSettings } from "./tenant-settings";
 
@@ -128,7 +129,20 @@ export async function generateBotReply(params: {
   try {
     // A short CRM answer benefits from focused context; excessive chunks add
     // latency without improving groundedness for this staging knowledge base.
-    sources = await retrieveKnowledge({ tenantId: params.tenantId, query: normaliseKnowledgeQuery(lastUserMessage), limit: 3 });
+    sources = await retrieveKnowledge({
+      tenantId: params.tenantId,
+      query: normaliseKnowledgeQuery(lastUserMessage),
+      limit: 4,
+      categories: [...CHAT_RETRIEVAL_CATEGORIES],
+    });
+    // Fall back to the full KB if category-scoped retrieval misses (legacy uncategorised docs).
+    if (!sources.length) {
+      sources = await retrieveKnowledge({
+        tenantId: params.tenantId,
+        query: normaliseKnowledgeQuery(lastUserMessage),
+        limit: 4,
+      });
+    }
   } catch (error) {
     console.error("Knowledge retrieval failed", error);
   }

@@ -2,6 +2,7 @@ import { after, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { ingestKnowledgeDocument } from "@/lib/knowledge";
+import { isKnowledgeCategory } from "@/lib/knowledge-categories";
 
 export const runtime = "nodejs";
 
@@ -12,20 +13,36 @@ export async function PATCH(req: Request, context: Context) {
     const session = await requireRole("OWNER", "ADMIN");
     const { id } = await context.params;
     const body = await req.json();
-    if (body.action !== "reindex") return NextResponse.json({ error: "Unsupported action" }, { status: 400 });
-    const document = await prisma.knowledgeDocument.updateMany({
-      where: { id, tenantId: session.tenantId },
-      data: { status: "processing", errorMessage: null },
-    });
-    if (!document.count) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    after(async () => {
-      try {
-        await ingestKnowledgeDocument(id, session.tenantId);
-      } catch (error) {
-        console.error("Knowledge re-index failed", error);
+
+    if (body.action === "reindex") {
+      const document = await prisma.knowledgeDocument.updateMany({
+        where: { id, tenantId: session.tenantId },
+        data: { status: "processing", errorMessage: null },
+      });
+      if (!document.count) return NextResponse.json({ error: "Not found" }, { status: 404 });
+      after(async () => {
+        try {
+          await ingestKnowledgeDocument(id, session.tenantId);
+        } catch (error) {
+          console.error("Knowledge re-index failed", error);
+        }
+      });
+      return NextResponse.json({ ok: true }, { status: 202 });
+    }
+
+    if (body.category !== undefined) {
+      if (!isKnowledgeCategory(String(body.category))) {
+        return NextResponse.json({ error: "Invalid knowledge category" }, { status: 400 });
       }
-    });
-    return NextResponse.json({ ok: true }, { status: 202 });
+      const document = await prisma.knowledgeDocument.updateMany({
+        where: { id, tenantId: session.tenantId },
+        data: { category: String(body.category) },
+      });
+      if (!document.count) return NextResponse.json({ error: "Not found" }, { status: 404 });
+      return NextResponse.json({ ok: true });
+    }
+
+    return NextResponse.json({ error: "Unsupported action" }, { status: 400 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unauthorized";
     return NextResponse.json({ error: message === "FORBIDDEN" ? "Forbidden" : "Unauthorized" }, { status: message === "FORBIDDEN" ? 403 : 401 });

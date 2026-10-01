@@ -112,16 +112,21 @@ export async function ingestKnowledgeDocument(documentId: string, tenantId: stri
   }
 }
 
-export async function retrieveKnowledge(params: { tenantId: string; query: string; limit?: number }) {
+export async function retrieveKnowledge(params: { tenantId: string; query: string; limit?: number; categories?: string[] }) {
   if (!params.query.trim()) return [] as KnowledgeSource[];
   const { config, index } = await getActiveKnowledgeIndex(params.tenantId);
   const [embedding] = await createEmbeddings(config, [params.query], "query");
   const vector = vectorLiteral(embedding, index.dimensions);
   const halfvec = Prisma.raw(`halfvec(${index.dimensions})`);
+  const categories = (params.categories || []).filter(Boolean);
+  const categoryFilter = categories.length
+    ? Prisma.sql`AND document."category" IN (${Prisma.join(categories)})`
+    : Prisma.empty;
   const rows = await prisma.$queryRaw<KnowledgeSource[]>(
     Prisma.sql`SELECT chunk."documentId", document."title", chunk."content", 1 - (chunk."embedding"::${halfvec} <=> ${vector}::${halfvec}) AS "score"
       FROM "KnowledgeChunk" AS chunk JOIN "KnowledgeDocument" AS document ON document."id" = chunk."documentId"
       WHERE chunk."tenantId" = ${params.tenantId} AND chunk."indexId" = ${index.id} AND document."embeddingIndexId" = ${index.id} AND document."status" = 'ready'
+      ${categoryFilter}
       ORDER BY chunk."embedding"::${halfvec} <=> ${vector}::${halfvec} LIMIT ${Math.min(Math.max(params.limit || 5, 1), 8)}`,
   );
   return rows.filter((row) => row.score >= 0.25);
