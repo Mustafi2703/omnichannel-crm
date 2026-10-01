@@ -174,10 +174,12 @@ ${operations.aiInstructions ? `Administrator-approved additional instructions:\n
 Return JSON: {"reply":"...","handoff":false,"qualification":{"city":"","need":"","timeline":""},"scoreDelta":0}`;
 
   const configuredClient = getChatClient();
-  if (!configuredClient) {
+  const budget = await isAiBudgetExceeded(params.tenantId);
+  if (!configuredClient || budget.exceeded) {
+    if (budget.exceeded) console.warn("AI monthly budget exceeded; using rule fallback", budget);
     const fallback = ruleBasedFallback(params, kb || foundation);
     const safe = applyReplySafety({ message: lastUserMessage, locale: params.locale, reply: fallback.reply, handoff: fallback.handoff, hasSources: sources.length > 0 || Boolean(foundation) });
-    return { ...fallback, ...safe, sources, latencyMs: Date.now() - startedAt };
+    return { ...fallback, ...safe, sources, latencyMs: Date.now() - startedAt, usedModel: budget.exceeded ? "budget-fallback" : fallback.usedModel };
   }
 
   try {
@@ -293,6 +295,28 @@ function ruleBasedFallback(
     usedModel: "rule-fallback",
     qualification: {},
   };
+}
+
+export async function getAiSpendThisMonth(tenantId: string) {
+  const start = new Date();
+  start.setUTCDate(1);
+  start.setUTCHours(0, 0, 0, 0);
+  const agg = await prisma.usageEvent.aggregate({
+    where: { tenantId, category: "ai", occurredAt: { gte: start } },
+    _sum: { totalCost: true },
+  });
+  return Number(agg._sum?.totalCost || 0);
+}
+
+/** Soft monthly OpenAI budget. When exceeded, generateBotReply uses rule fallback only. */
+export function getAiMonthlyBudgetUsd() {
+  const raw = Number(process.env.AI_MONTHLY_BUDGET_USD ?? "40");
+  return Number.isFinite(raw) && raw > 0 ? raw : 40;
+}
+
+export async function isAiBudgetExceeded(tenantId: string) {
+  const spent = await getAiSpendThisMonth(tenantId);
+  return { exceeded: spent >= getAiMonthlyBudgetUsd(), spent, budget: getAiMonthlyBudgetUsd() };
 }
 
 export async function logAiUsage(params: {

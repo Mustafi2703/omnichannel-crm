@@ -1,6 +1,15 @@
 # Implementation Plan — Client Scope + Security & Bug Fixes
 
-Status: **planning document — no code has been changed.** This turns
+Status: **execution in progress / mostly complete on staging.**  
+Live gap scorecard: [`docs/PLAN_GAP_STATUS.md`](./PLAN_GAP_STATUS.md) · Tester+client handoff: [`docs/CLIENT_AND_TESTER_HANDOFF.md`](./CLIENT_AND_TESTER_HANDOFF.md)
+
+Phases **0–4** are implemented and deployed to staging (Phase 4 uses a simplified comments field). Phase **5** awaits client scope confirmation. Campaigns/WhatsApp remain held on AiSensy.
+
+Original planning text below is retained for file-level reference.
+
+---
+
+Status (historical): **planning document — no code has been changed.** This turns
 `docs/CLIENT_DELIVERY_PLAN.md` (phasing, verified against live staging) and
 `docs/SECURITY_AND_TESTING_REVIEW.md` (21 findings) into one sequenced,
 file-level implementation plan, plus the two extra bugs found while testing
