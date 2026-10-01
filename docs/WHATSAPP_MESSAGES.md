@@ -8,9 +8,9 @@ Hi — staging re-verified and ready for rigorous UAT.
 URL: https://staging-crm.eaglobalwater.com
 Cloudflare proxy active.
 
-Tester login (temp — change after first login):
+Tester login (ask me privately / password vault — never commit passwords):
 Email: it@eaglobalwater.com
-Password: EaUatTemp2026!
+Password: <shared out-of-band via vault only>
 
 Pre-verified by us:
 • Health / login / main APIs OK
@@ -114,7 +114,7 @@ Our tester is running a full checklist now; once green → client UAT.
 Merhaba — staging yeniden doğrulandı, sıkı UAT için hazır.
 
 URL: https://staging-crm.eaglobalwater.com
-Tester: it@eaglobalwater.com / EaUatTemp2026!
+Tester: it@eaglobalwater.com (şifre vault / özel mesaj — repoya yazmayın)
 
 Lütfen tam geçiş yapın (AI cevaplarının screenshot’ı):
 • Login, Leads 10 stage drag, Inbox multi-assign

@@ -3,7 +3,7 @@
 **Staging:** https://staging-crm.eaglobalwater.com  
 **Cloudflare proxy:** active  
 **Admins:** `erdinc.astar@biohidrogen.com` · `fatih.sanal@biohidrogen.com` · `it@eaglobalwater.com`  
-**Tester temp login:** `it@eaglobalwater.com` / `EaUatTemp2026!` (change after first login)  
+**Tester login:** `it@eaglobalwater.com` — password only via vault / private channel (never commit secrets)  
 **Last verification:** 2026-10-02 — bilingual KB + scope guardrails + widget AI smoke PASSED  
 
 ---
