@@ -71,7 +71,8 @@ export async function createEmbeddings(
   // NVIDIA's OpenAI-compatible embedding endpoint extends the request body
   // with input_type/modality; the OpenAI SDK type intentionally omits them.
   const response = await client.embeddings.create(request as never);
-  return assertEmbeddings(response.data.map((item) => item.embedding), config);
+  const vectors = response.data.map((item) => item.embedding as unknown as number[]);
+  return assertEmbeddings(vectors, config);
 }
 
 export async function smokeTestEmbeddings(config = getEmbeddingConfiguration()) {

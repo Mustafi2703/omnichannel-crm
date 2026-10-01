@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import type { TaskStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/auth";
 import { audit } from "@/lib/audit";
 import { fromApiError, paginationSchema, taskInputSchema } from "@/lib/api";
+
+type TaskStatusFilter = "open" | "done" | "cancelled";
 
 export async function GET(req: Request) {
   try {
@@ -11,9 +12,9 @@ export async function GET(req: Request) {
     const params = Object.fromEntries(new URL(req.url).searchParams);
     const { page, pageSize } = paginationSchema.parse(params);
     const statusParam = params.status;
-    const status =
+    const status: TaskStatusFilter | undefined =
       statusParam === "open" || statusParam === "done" || statusParam === "cancelled"
-        ? (statusParam as TaskStatus)
+        ? statusParam
         : undefined;
     const where = {
       tenantId: session.tenantId,

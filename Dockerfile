@@ -4,6 +4,7 @@ WORKDIR /app
 # Next.js evaluates API modules during its production build. Compose replaces
 # this harmless value with the real server-only DATABASE_URL at runtime.
 ENV DATABASE_URL="postgresql://omnicrm:build-only@postgres:5432/omnicrm?schema=public"
+ENV JWT_SECRET="build-only-not-for-runtime"
 
 RUN apt-get update \
   && apt-get install -y --no-install-recommends openssl \
