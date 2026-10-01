@@ -61,7 +61,9 @@ export async function POST(req: Request, ctx: Ctx) {
     }
 
     if (asBot || (conversation.aiMode === "auto" && body.triggerAi)) {
-      const locale = (conversation.contact.city || "").match(/[İIıi]/) ? "tr" : "tr";
+      const contactLocale = (conversation.contact.metadata as { locale?: string } | null)?.locale;
+      const tenantLocale = ((await prisma.tenant.findUnique({ where: { id: session.tenantId }, select: { settings: true } }))?.settings as { localeDefault?: string } | null)?.localeDefault;
+      const locale = contactLocale === "en" || tenantLocale === "en" ? "en" : "tr";
       const history = conversation.messages.map((m) => ({
         role: (m.direction === "inbound" ? "user" : "assistant") as "user" | "assistant",
         content: m.bodyText,

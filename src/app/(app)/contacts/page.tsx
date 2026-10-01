@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { LayoutGrid, Table2 } from "lucide-react";
 import { useLocale } from "@/components/ClientProviders";
 import { t } from "@/lib/i18n";
@@ -16,27 +16,33 @@ type ContactRow = {
   _count?: { leads: number; conversations: number };
 };
 
+type Pagination = { page: number; pageSize: number; total: number };
+
 export default function ContactsPage() {
   const { locale } = useLocale();
   const [contacts, setContacts] = useState<ContactRow[]>([]);
+  const [pagination, setPagination] = useState<Pagination>({ page: 1, pageSize: 25, total: 0 });
   const [view, setView] = useState<"table" | "cards">("table");
   const [q, setQ] = useState("");
 
+  async function load(page = 1, query = q) {
+    const params = new URLSearchParams({
+      page: String(page),
+      pageSize: String(pagination.pageSize),
+      ...(query.trim() ? { q: query.trim() } : {}),
+    });
+    const response = await fetch(`/api/contacts?${params}`);
+    const data = await response.json();
+    setContacts(data.contacts || []);
+    setPagination(data.pagination || { page, pageSize: 25, total: 0 });
+  }
+
   useEffect(() => {
-    fetch("/api/contacts")
-      .then((r) => r.json())
-      .then((d) => setContacts(d.contacts || []));
+    void load(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const filtered = useMemo(() => {
-    const term = q.trim().toLowerCase();
-    if (!term) return contacts;
-    return contacts.filter((c) =>
-      [c.displayName, c.companyName, c.email, c.phone, c.city, c.source]
-        .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(term)),
-    );
-  }, [contacts, q]);
+  const totalPages = Math.max(1, Math.ceil((pagination.total || 0) / pagination.pageSize));
 
   return (
     <div className="space-y-6">
@@ -45,17 +51,24 @@ export default function ContactsPage() {
           <h1 className="text-2xl font-black">{t(locale, "contacts")}</h1>
           <p className="text-sm text-slate-500">
             {locale === "tr"
-              ? "Varsayılan görünüm: veri tablosu (yüksek müşteri hacmi için)."
-              : "Default view: data table for large customer volumes."}
+              ? "Varsayılan görünüm: sayfalı veri tablosu."
+              : "Default view: paginated data table."}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && void load(1, q)}
             placeholder={t(locale, "search")}
             className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
           />
+          <button
+            onClick={() => void load(1, q)}
+            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold"
+          >
+            {t(locale, "search")}
+          </button>
           <div className="flex rounded-xl border border-slate-200 bg-white p-1">
             <button
               onClick={() => setView("table")}
@@ -89,7 +102,7 @@ export default function ContactsPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((c) => (
+              {contacts.map((c) => (
                 <tr key={c.id} className="border-b border-slate-50 hover:bg-slate-50/80">
                   <td className="px-4 py-3 font-semibold">{c.displayName}</td>
                   <td className="px-4 py-3 text-slate-600">{c.companyName || "—"}</td>
@@ -107,7 +120,7 @@ export default function ContactsPage() {
               ))}
             </tbody>
           </table>
-          {!filtered.length && (
+          {!contacts.length && (
             <p className="p-8 text-center text-sm text-slate-500">
               {locale === "tr" ? "Kişi bulunamadı." : "No contacts found."}
             </p>
@@ -115,7 +128,7 @@ export default function ContactsPage() {
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
-          {filtered.map((c) => (
+          {contacts.map((c) => (
             <div key={c.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -130,14 +143,34 @@ export default function ContactsPage() {
                 <div>{c.email || "—"}</div>
                 <div>{c.phone || "—"}</div>
                 <div>{c.city || "—"}</div>
-                <div className="text-xs text-slate-400">
-                  Leads: {c._count?.leads || 0} · Conv: {c._count?.conversations || 0}
-                </div>
               </div>
             </div>
           ))}
         </div>
       )}
+
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-slate-500">
+          {pagination.total} {locale === "tr" ? "kayıt" : "records"} · {locale === "tr" ? "Sayfa" : "Page"}{" "}
+          {pagination.page}/{totalPages}
+        </span>
+        <div className="flex gap-2">
+          <button
+            disabled={pagination.page <= 1}
+            onClick={() => void load(pagination.page - 1)}
+            className="rounded-lg border px-3 py-1.5 text-xs font-bold disabled:opacity-40"
+          >
+            Prev
+          </button>
+          <button
+            disabled={pagination.page >= totalPages}
+            onClick={() => void load(pagination.page + 1)}
+            className="rounded-lg border px-3 py-1.5 text-xs font-bold disabled:opacity-40"
+          >
+            Next
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

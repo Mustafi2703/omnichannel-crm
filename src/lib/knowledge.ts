@@ -2,6 +2,7 @@ import mammoth from "mammoth";
 import { PDFParse } from "pdf-parse";
 import { Prisma, type KnowledgeIndex } from "@prisma/client";
 import { createEmbeddings, getEmbeddingConfiguration } from "./embeddings";
+import { ALWAYS_INJECT_CATEGORIES, HUMAN_ONLY_CATEGORIES } from "./knowledge-categories";
 import { prisma } from "./prisma";
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
@@ -121,7 +122,7 @@ export async function retrieveKnowledge(params: { tenantId: string; query: strin
   const categories = (params.categories || []).filter(Boolean);
   const categoryFilter = categories.length
     ? Prisma.sql`AND document."category" IN (${Prisma.join(categories)})`
-    : Prisma.empty;
+    : Prisma.sql`AND document."category" NOT IN (${Prisma.join([...HUMAN_ONLY_CATEGORIES])})`;
   const rows = await prisma.$queryRaw<KnowledgeSource[]>(
     Prisma.sql`SELECT chunk."documentId", document."title", chunk."content", 1 - (chunk."embedding"::${halfvec} <=> ${vector}::${halfvec}) AS "score"
       FROM "KnowledgeChunk" AS chunk JOIN "KnowledgeDocument" AS document ON document."id" = chunk."documentId"
@@ -130,4 +131,25 @@ export async function retrieveKnowledge(params: { tenantId: string; query: strin
       ORDER BY chunk."embedding"::${halfvec} <=> ${vector}::${halfvec} LIMIT ${Math.min(Math.max(params.limit || 5, 1), 8)}`,
   );
   return rows.filter((row) => row.score >= 0.25);
+}
+
+/** CORE + FUNDAMENTAL (non-IBAN) docs — injected into every AI system prompt. */
+export async function loadAlwaysInjectKnowledge(tenantId: string) {
+  const docs = await prisma.knowledgeDocument.findMany({
+    where: {
+      tenantId,
+      status: "ready",
+      category: { in: [...ALWAYS_INJECT_CATEGORIES] },
+    },
+    select: { id: true, title: true, content: true, category: true },
+    orderBy: { updatedAt: "desc" },
+    take: 20,
+  });
+  return docs.map((doc) => ({
+    documentId: doc.id,
+    title: doc.title,
+    content: doc.content.slice(0, 2_000),
+    score: 1,
+    category: doc.category,
+  }));
 }

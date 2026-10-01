@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireSession } from "@/lib/auth";
+import { requireRole, requireSession } from "@/lib/auth";
 import { audit } from "@/lib/audit";
 import { contactInputSchema, fromApiError, idSchema } from "@/lib/api";
 
@@ -43,5 +43,55 @@ export async function PATCH(req: Request, ctx: Context) {
   } catch (error) { return fromApiError(error); }
 }
 export async function DELETE(req: Request, ctx: Context) {
-  try { const session = await requireSession(); const id = idSchema.parse((await ctx.params).id); const action = new URL(req.url).searchParams.get("action"); const contact = await prisma.contact.findFirst({ where: { id, tenantId: session.tenantId } }); if (!contact) return NextResponse.json({ error: { code: "NOT_FOUND", message: "Contact not found" } }, { status: 404 }); if (action === "anonymize") { const value = `deleted-${id.slice(-8)}`; await prisma.$transaction([prisma.contactIdentity.deleteMany({ where: { contactId: id } }), prisma.contact.update({ where: { id }, data: { displayName: "Deleted contact", companyName: null, email: null, phone: null, city: null, gclid: null, landingUrl: null, utmSource: null, utmMedium: null, utmCampaign: null, metadata: { anonymizedAt: new Date().toISOString() } } })]); await audit({ tenantId: session.tenantId, actorUserId: session.id, action: "anonymize", entityType: "contact", entityId: id, before: { displayName: contact.displayName }, after: { reference: value } }); return NextResponse.json({ ok: true }); } await prisma.contact.delete({ where: { id } }); await audit({ tenantId: session.tenantId, actorUserId: session.id, action: "delete", entityType: "contact", entityId: id, before: { displayName: contact.displayName } }); return NextResponse.json({ ok: true }); } catch (error) { return fromApiError(error); }
+  try {
+    const session = await requireRole("OWNER", "ADMIN");
+    const id = idSchema.parse((await ctx.params).id);
+    const action = new URL(req.url).searchParams.get("action");
+    const contact = await prisma.contact.findFirst({ where: { id, tenantId: session.tenantId } });
+    if (!contact) return NextResponse.json({ error: { code: "NOT_FOUND", message: "Contact not found" } }, { status: 404 });
+    if (action === "anonymize") {
+      const value = `deleted-${id.slice(-8)}`;
+      await prisma.$transaction([
+        prisma.contactIdentity.deleteMany({ where: { contactId: id } }),
+        prisma.contact.update({
+          where: { id },
+          data: {
+            displayName: "Deleted contact",
+            companyName: null,
+            email: null,
+            phone: null,
+            city: null,
+            gclid: null,
+            landingUrl: null,
+            utmSource: null,
+            utmMedium: null,
+            utmCampaign: null,
+            metadata: { anonymizedAt: new Date().toISOString() },
+          },
+        }),
+      ]);
+      await audit({
+        tenantId: session.tenantId,
+        actorUserId: session.id,
+        action: "anonymize",
+        entityType: "contact",
+        entityId: id,
+        before: { displayName: contact.displayName },
+        after: { reference: value },
+      });
+      return NextResponse.json({ ok: true });
+    }
+    await prisma.contact.delete({ where: { id } });
+    await audit({
+      tenantId: session.tenantId,
+      actorUserId: session.id,
+      action: "delete",
+      entityType: "contact",
+      entityId: id,
+      before: { displayName: contact.displayName },
+    });
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    return fromApiError(error);
+  }
 }

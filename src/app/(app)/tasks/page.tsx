@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useLocale } from "@/components/ClientProviders";
 import { t } from "@/lib/i18n";
 import { formatDate, cn } from "@/lib/utils";
@@ -28,15 +28,16 @@ export default function TasksPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  async function load() {
-    const res = await fetch("/api/tasks?pageSize=100");
+  const load = useCallback(async () => {
+    const statusQuery = filter === "all" ? "" : `&status=${filter}`;
+    const res = await fetch(`/api/tasks?pageSize=100${statusQuery}`);
     const data = await res.json();
     setTasks(data.tasks || []);
-  }
+  }, [filter]);
 
   useEffect(() => {
-    load();
-  }, []);
+    void load();
+  }, [load]);
 
   async function complete(id: string) {
     await fetch(`/api/tasks/${id}`, {
@@ -44,7 +45,7 @@ export default function TasksPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: "done" }),
     });
-    load();
+    await load();
   }
 
   async function create(event: FormEvent) {
@@ -74,14 +75,14 @@ export default function TasksPage() {
     }
   }
 
-  const visible = tasks.filter((task) => (filter === "all" ? true : task.status === filter));
-
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-black">{t(locale, "tasks")}</h1>
         <p className="text-sm text-slate-500">
-          {locale === "tr" ? "Takip görevlerini oluşturun, filtreleyin ve tamamlayın." : "Create, filter, and complete follow-up tasks."}
+          {locale === "tr"
+            ? "Takip görevlerini oluşturun, filtreleyin ve tamamlayın."
+            : "Create, filter, and complete follow-up tasks."}
         </p>
       </div>
 
@@ -131,7 +132,7 @@ export default function TasksPage() {
       </div>
 
       <div className="space-y-3">
-        {visible.map((task) => {
+        {tasks.map((task) => {
           const overdue = task.status === "open" && task.dueAt && new Date(task.dueAt) < new Date();
           return (
             <div
@@ -163,7 +164,7 @@ export default function TasksPage() {
             </div>
           );
         })}
-        {!visible.length && (
+        {!tasks.length && (
           <p className="rounded-2xl border border-dashed border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
             {locale === "tr" ? "Gösterilecek görev yok." : "No tasks to show."}
           </p>

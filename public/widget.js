@@ -147,15 +147,18 @@
         }),
       });
       const data = await response.json();
-      const reply = data.reply || data.error?.message;
-      if (!response.ok || !reply) throw new Error(data.error?.message || "Delivery failed");
+      const reply = data.reply;
+      if (!response.ok || !reply) {
+        console.error("Widget delivery failed", data.error || data);
+        throw new Error("delivery");
+      }
       add(reply);
       if (panel.hidden) badge.hidden = false;
     } catch (err) {
-      const message =
-        err instanceof Error && err.message
-          ? err.message
-          : "We could not send that message. Please try again.";
+      console.error("Widget send failed", err);
+      const message = navigator.language.startsWith("tr")
+        ? "Mesaj gönderilemedi. Lütfen tekrar deneyin."
+        : "We could not send that message. Please try again.";
       errorEl.textContent = message;
       errorEl.hidden = false;
       add(message);

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireSession } from "@/lib/auth";
+import { requireRole, requireSession } from "@/lib/auth";
 import { audit } from "@/lib/audit";
 import { fromApiError, idSchema, leadInputSchema } from "@/lib/api";
 
@@ -21,4 +21,15 @@ export async function PATCH(req: Request, ctx: Context) {
     await audit({ tenantId: session.tenantId, actorUserId: session.id, action: "update", entityType: "lead", entityId: id, before: { stageId: before.stageId, score: before.score }, after: { stageId: lead.stageId, score: lead.score, automationPaused: stage?.key === "negative" || stage?.key === "blacklist" } }); return NextResponse.json({ lead });
   } catch (error) { return fromApiError(error); }
 }
-export async function DELETE(_req: Request, ctx: Context) { try { const session = await requireSession(); const id = idSchema.parse((await ctx.params).id); const lead = await prisma.lead.deleteMany({ where: { id, tenantId: session.tenantId } }); if (!lead.count) return NextResponse.json({ error: { code: "NOT_FOUND", message: "Lead not found" } }, { status: 404 }); await audit({ tenantId: session.tenantId, actorUserId: session.id, action: "delete", entityType: "lead", entityId: id }); return NextResponse.json({ ok: true }); } catch (error) { return fromApiError(error); } }
+export async function DELETE(_req: Request, ctx: Context) {
+  try {
+    const session = await requireRole("OWNER", "ADMIN");
+    const id = idSchema.parse((await ctx.params).id);
+    const lead = await prisma.lead.deleteMany({ where: { id, tenantId: session.tenantId } });
+    if (!lead.count) return NextResponse.json({ error: { code: "NOT_FOUND", message: "Lead not found" } }, { status: 404 });
+    await audit({ tenantId: session.tenantId, actorUserId: session.id, action: "delete", entityType: "lead", entityId: id });
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    return fromApiError(error);
+  }
+}

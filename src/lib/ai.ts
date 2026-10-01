@@ -1,6 +1,6 @@
 import type { ChatCompletionCreateParamsNonStreaming } from "openai/resources/chat/completions";
 import { prisma } from "./prisma";
-import { retrieveKnowledge, type KnowledgeSource } from "./knowledge";
+import { loadAlwaysInjectKnowledge, retrieveKnowledge, type KnowledgeSource } from "./knowledge";
 import { CHAT_RETRIEVAL_CATEGORIES } from "./knowledge-categories";
 import { getChatClient } from "./llm";
 import { getOperationsSettings } from "./tenant-settings";
@@ -38,7 +38,7 @@ function replySafety(message: string, locale: "tr" | "en"): ReplySafety {
   const text = normaliseKnowledgeQuery(message).toLocaleLowerCase("tr-TR");
   const isTurkish = locale === "tr";
   const human = /\b(insan|temsilci|human|agent|adviser|advisor|sales)\b/.test(text);
-  const commercial = /\b(fiyat|price|teklif|quote|indirim|discount|taksit|payment|ödeme|delivery|teslimat)\b/.test(text);
+  const commercial = /\b(fiyat|price|teklif|quote|indirim|discount|taksit|payment|ödeme|delivery|teslimat|iban|banka|bank account|havale|eft)\b/.test(text);
   // Do not treat an ordinary "water-treatment device" product question as a
   // medical request. Health safeguards are reserved for an actual condition,
   // cure, diagnosis, or treatment claim.
@@ -126,16 +126,20 @@ export async function generateBotReply(params: {
   const operations = getOperationsSettings(tenant?.settings);
   const lastUserMessage = params.history.filter((message) => message.role === "user").at(-1)?.content || "";
   let sources: KnowledgeSource[] = [];
+  let foundation = "";
   try {
-    // A short CRM answer benefits from focused context; excessive chunks add
-    // latency without improving groundedness for this staging knowledge base.
+    const always = await loadAlwaysInjectKnowledge(params.tenantId);
+    foundation = always
+      .map((doc, index) => `[F${index + 1}] ${doc.title}\n${doc.content}`)
+      .join("\n\n")
+      .slice(0, 2_500);
     sources = await retrieveKnowledge({
       tenantId: params.tenantId,
       query: normaliseKnowledgeQuery(lastUserMessage),
       limit: 4,
       categories: [...CHAT_RETRIEVAL_CATEGORIES],
     });
-    // Fall back to the full KB if category-scoped retrieval misses (legacy uncategorised docs).
+    // Fall back to non-IBAN KB if category-scoped retrieval misses (legacy docs).
     if (!sources.length) {
       sources = await retrieveKnowledge({
         tenantId: params.tenantId,
@@ -152,27 +156,27 @@ export async function generateBotReply(params: {
 
   const system =
     params.locale === "tr"
-      ? `Sen bir Türkçe satış asistanısın. FAQ bilgisini kullan.
+      ? `Sen bir Türkçe satış asistanısın.
+Önce onaylı bilgi bankasındaki somut gerçekleri söyle; ardından gerekiyorsa en fazla bir nitelendirme sorusu sor.
 Yalnızca KB'de desteklenen ürün gerçeklerini söyle; KB yeterli değilse insan desteğine yönlendir.
-Kesin fiyat, indirim, sözleşme veya teslimat sözü uydurma. İnsan istediğinde ya da fiyat/teklif sorulduğunda handoff=true yap.
-Tıbbi tavsiye, teşhis, tedavi, hastalık önleme veya kesin sağlık sonucu iddia etme. Sağlıkla ilgili bir soru varsa yalnızca onaylı KB bilgisini tarafsız ve sınırlı biçimde aktar; gerekirse yetkili temsilciye yönlendir.
-Kısa, açık yanıtlar ver ve aynı anda en fazla bir nitelendirme sorusu sor.
-Kullanıcı selam verirse veya kısa bir evet/hayır yanıtı yazarsa, konuşma geçmişini dikkate al. Genel selamı, “Size nasıl yardımcı olabilirim?” ifadesini veya önceki soruyu tekrarlama. Yanıtı kısaca kabul et ve kullanım amacı ya da ihtiyacı hakkında farklı, tek bir nitelendirme sorusu sor. Güvenli somut seçenekler kullan: ev/ofis/işletme kullanımı veya cihaz seçimi/kurulum/bakım desteği. “Hayır” önceki seçeneği reddediyorsa, farklı bir seçenek kümesiyle devam et. Bu tür bir nitelendirme sorusu için desteklenmeyen ürün gerçeği uydurma ve yalnızca selam verdiği için handoff yapma.
-Teknik destek, filtre değişimi, arıza veya bakım talebinde iletişim bilgilerini al ve yetkili ekibin mesai saatleri içinde dönüş yapacağını belirt.
+Kesin fiyat, indirim, IBAN, banka, sözleşme veya teslimat sözü uydurma. İnsan istediğinde ya da fiyat/teklif/ödeme sorulduğunda handoff=true yap.
+Tıbbi tavsiye verme. Kısa, açık yanıtlar ver.
+Kullanıcı selam verirse veya kısa bir evet/hayır yanıtı yazarsa, konuşma geçmişini dikkate al. Genel selamı tekrarlama.
 ${operations.aiInstructions ? `Yönetici tarafından onaylanan ek talimatlar:\n${operations.aiInstructions}` : ""}
 JSON dön: {"reply":"...","handoff":false,"qualification":{"city":"","need":"","timeline":""},"scoreDelta":0}`
-      : `You are an English sales assistant. Always reply in English, even when the knowledge source is in another language. Use the FAQ knowledge.
+      : `You are an English sales assistant. Always reply in English, even when the knowledge source is in another language.
+When KB sources support an answer, state those facts first, then optionally ask at most one qualifying question.
 Only state product facts supported by the KB; hand off if the KB is insufficient.
-Never invent pricing, discounts, contracts, delivery promises, medical advice, diagnoses, treatment, disease prevention, or guaranteed health outcomes.
-If the user asks for a person or for pricing/quotes, set handoff=true. Keep replies concise and ask no more than one qualification question.
-For a greeting or a brief yes/no reply, use the conversation history. Do not repeat a generic greeting, “How can I help?”, or the previous question. Acknowledge the reply and ask one different, concrete qualification question about the user's intended use or need. Use safe choices such as home/office/business use or choosing a system/installation/maintenance support. If “no” rejects the prior choice, continue with a different set of choices. Do not invent unsupported product facts for that question, and do not hand off solely because of a greeting.
+Never invent pricing, discounts, IBAN/bank details, contracts, delivery promises, or medical advice.
+If the user asks for a person, pricing/quotes, or payment/IBAN details, set handoff=true. Keep replies concise.
+For a greeting or a brief yes/no reply, use the conversation history. Do not repeat a generic greeting.
 ${operations.aiInstructions ? `Administrator-approved additional instructions:\n${operations.aiInstructions}` : ""}
 Return JSON: {"reply":"...","handoff":false,"qualification":{"city":"","need":"","timeline":""},"scoreDelta":0}`;
 
   const configuredClient = getChatClient();
   if (!configuredClient) {
-    const fallback = ruleBasedFallback(params, kb);
-    const safe = applyReplySafety({ message: lastUserMessage, locale: params.locale, reply: fallback.reply, handoff: fallback.handoff, hasSources: sources.length > 0 });
+    const fallback = ruleBasedFallback(params, kb || foundation);
+    const safe = applyReplySafety({ message: lastUserMessage, locale: params.locale, reply: fallback.reply, handoff: fallback.handoff, hasSources: sources.length > 0 || Boolean(foundation) });
     return { ...fallback, ...safe, sources, latencyMs: Date.now() - startedAt };
   }
 
@@ -186,7 +190,10 @@ Return JSON: {"reply":"...","handoff":false,"qualification":{"city":"","need":""
       // The widget awaits one JSON reply; do not request NVIDIA's SSE default.
       stream: false,
       messages: [
-        { role: "system", content: `${system}\n\nKB:\n${kb.slice(0, 3500)}` },
+        {
+          role: "system",
+          content: `${system}\n\nFOUNDATION (always apply):\n${foundation || "(none)"}\n\nRETRIEVED KB:\n${kb.slice(0, 3500) || "(none)"}`,
+        },
         {
           role: "user",
           content: `Contact: ${params.contactName}\nChannel: ${params.channelType}`,

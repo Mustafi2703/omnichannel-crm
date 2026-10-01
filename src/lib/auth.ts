@@ -2,14 +2,13 @@ import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
+import { requireJwtSecretBytes } from "./jwt-secret";
 import type { Role } from "@prisma/client";
 
 const COOKIE = "omni_session";
 
-function secret() {
-  return new TextEncoder().encode(
-    process.env.JWT_SECRET || "dev-omni-crm-secret-change-me",
-  );
+export function secret() {
+  return requireJwtSecretBytes();
 }
 
 export type SessionUser = {
