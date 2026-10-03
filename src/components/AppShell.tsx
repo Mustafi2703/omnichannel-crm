@@ -18,6 +18,8 @@ import {
   Settings2,
   LogOut,
   Languages,
+  Menu,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { t, type Locale } from "@/lib/i18n";
@@ -68,8 +70,13 @@ export function AppShell({
   const [unread, setUnread] = useState(0);
   const [notifications, setNotifications] = useState<{ id: string; title: string; body?: string | null }[]>([]);
   const [openNotifications, setOpenNotifications] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   async function loadNotifications() { const response = await fetch("/api/notifications"); const data = await response.json(); const rows = data.notifications || []; setNotifications(rows); setUnread(rows.filter((item: { readAt?: string | null }) => !item.readAt).length); }
   useEffect(() => { void loadNotifications(); const source = new EventSource("/api/realtime"); source.addEventListener("summary", (event) => { const data = JSON.parse(event.data) as { unread?: number }; setUnread(data.unread || 0); }); return () => source.close(); }, []);
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
   useEffect(() => {
     const timer = window.setTimeout(() => {
       nav.forEach((item) => {
@@ -134,9 +141,85 @@ export function AppShell({
             </button>
           </div>
         </aside>
+        {mobileOpen ? (
+          <button
+            type="button"
+            aria-label="Close menu"
+            className="fixed inset-0 z-40 bg-black/40 md:hidden"
+            onClick={() => setMobileOpen(false)}
+          />
+        ) : null}
+        <aside
+          className={cn(
+            "fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-slate-200 bg-[#0f172a] text-slate-100 transition-transform duration-200 md:hidden",
+            mobileOpen ? "translate-x-0" : "-translate-x-full",
+          )}
+        >
+          <div className="flex items-center justify-between border-b border-white/10 px-5 py-5">
+            <div>
+              <div className="text-lg font-bold tracking-tight">{t(locale, "appName")}</div>
+              <div className="mt-1 text-xs text-slate-400">{t(locale, "tagline")}</div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setMobileOpen(false)}
+              className="rounded-lg p-2 text-slate-300 hover:bg-white/5"
+              aria-label="Close menu"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <nav className="flex-1 space-y-1 overflow-y-auto p-3">
+            {nav.map((item) => {
+              const Icon = item.icon;
+              const active = pathname.startsWith(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMobileOpen(false)}
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition",
+                    active
+                      ? "bg-blue-600 text-white"
+                      : "text-slate-300 hover:bg-white/5 hover:text-white",
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                  {t(locale, item.key)}
+                </Link>
+              );
+            })}
+          </nav>
+          <div className="space-y-2 border-t border-white/10 p-4">
+            <button
+              onClick={() => onLocale(locale === "tr" ? "en" : "tr")}
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-300 hover:bg-white/5"
+            >
+              <Languages className="h-4 w-4" />
+              {locale === "tr" ? "English" : "Türkçe"}
+            </button>
+            <div className="px-3 text-xs text-slate-500">{userName}</div>
+            <button
+              onClick={logout}
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-300 hover:bg-white/5"
+            >
+              <LogOut className="h-4 w-4" />
+              {t(locale, "logout")}
+            </button>
+          </div>
+        </aside>
         <main className="flex-1 overflow-auto">
-          <div className="border-b border-slate-200 bg-white px-4 py-3 md:hidden">
+          <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 md:hidden">
             <div className="font-bold">{t(locale, "appName")}</div>
+            <button
+              type="button"
+              onClick={() => setMobileOpen(true)}
+              className="rounded-lg border border-slate-200 p-2"
+              aria-label="Open menu"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
           </div>
           <div className="mx-auto max-w-7xl p-4 md:p-8"><div className="mb-3 flex justify-end"><div className="relative"><button onClick={() => { setOpenNotifications(!openNotifications); void loadNotifications(); }} className="relative rounded-lg border border-slate-200 bg-white p-2" aria-label="Notifications"><Bell className="h-4 w-4" />{unread ? <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-red-600 px-1 text-[9px] text-white">{unread}</span> : null}</button>{openNotifications ? <div className="absolute right-0 z-20 mt-2 w-80 rounded-xl border border-slate-200 bg-white p-2 shadow-xl">{notifications.length ? notifications.slice(0, 8).map((n) => <button key={n.id} onClick={async () => { await fetch("/api/notifications", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: n.id }) }); void loadNotifications(); }} className="block w-full rounded-lg p-2 text-left hover:bg-slate-50"><div className="text-sm font-semibold">{n.title}</div><div className="text-xs text-slate-500">{n.body}</div></button>) : <div className="p-3 text-sm text-slate-500">No notifications</div>}</div> : null}</div></div>{children}</div>
         </main>

@@ -39,7 +39,7 @@ export default function WidgetSettingsPage() {
     });
     const data = await r.json();
     if (!r.ok) {
-      setError(data.error || "Save failed");
+      setError(typeof data.error === "string" ? data.error : data.error?.message || "Save failed");
       return;
     }
     setSettings(data.settings || settings);
@@ -50,7 +50,7 @@ export default function WidgetSettingsPage() {
     const r = await fetch("/api/admin/widget", { method: "POST" });
     const data = await r.json();
     if (!r.ok) {
-      setError(data.error || "Could not generate key");
+      setError(typeof data.error === "string" ? data.error : data.error?.message || "Could not generate key");
       return;
     }
     setSettings(data.settings || settings);
@@ -63,11 +63,20 @@ export default function WidgetSettingsPage() {
       <div className="space-y-3 rounded-xl border bg-white p-4">
         <label className="block text-sm">
           Brand colour
-          <input
-            value={settings.brandColor || "#2563eb"}
-            onChange={(e) => setSettings({ ...settings, brandColor: e.target.value })}
-            className="ml-2 rounded border p-2"
-          />
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <input
+              type="color"
+              value={settings.brandColor || "#2563eb"}
+              onChange={(e) => setSettings({ ...settings, brandColor: e.target.value })}
+              className="h-10 w-14 cursor-pointer rounded border border-slate-200"
+            />
+            <input
+              value={settings.brandColor || "#2563eb"}
+              onChange={(e) => setSettings({ ...settings, brandColor: e.target.value })}
+              placeholder="#rrggbb"
+              className="min-w-[8rem] flex-1 rounded border p-2 font-mono text-sm"
+            />
+          </div>
         </label>
         <label className="block text-sm">
           Welcome copy (TR)

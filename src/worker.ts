@@ -20,7 +20,16 @@ async function managerIds(tenantId: string, settings: OperationsSettings) {
 async function notifyManagers(params: { conversation: SlaConversation; title: string; body: string; type: string }) {
   const settings = getOperationsSettings(params.conversation.tenant.settings);
   const recipients = await managerIds(params.conversation.tenantId, settings);
-  await Promise.all(recipients.map((userId) => notify({ tenantId: params.conversation.tenantId, userId, type: params.type, title: params.title, body: params.body })));
+  const contact = await prisma.contact.findFirst({
+    where: { id: params.conversation.contactId },
+    select: { displayName: true },
+  });
+  const body = `${params.body} Contact: ${contact?.displayName || "Unknown"}. Open: /inbox?c=${params.conversation.id}`;
+  await Promise.all(
+    recipients.map((userId) =>
+      notify({ tenantId: params.conversation.tenantId, userId, type: params.type, title: params.title, body }),
+    ),
+  );
 }
 
 async function escalateUnassigned(now: Date) {

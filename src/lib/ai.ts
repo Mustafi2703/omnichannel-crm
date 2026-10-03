@@ -4,6 +4,23 @@ import { loadAlwaysInjectKnowledge, retrieveKnowledge, type KnowledgeSource } fr
 import { CHAT_RETRIEVAL_CATEGORIES } from "./knowledge-categories";
 import { getChatClient } from "./llm";
 import { getOperationsSettings } from "./tenant-settings";
+import {
+  foldText,
+  isBriefAck,
+  isCommercialIntent,
+  isOffTopicMessage,
+  isOptOutMessage,
+  normaliseKnowledgeQuery,
+  stripMarkdown,
+} from "./ai-guards";
+
+export {
+  foldText,
+  isCommercialIntent,
+  isOffTopicMessage,
+  isOptOutMessage,
+  stripMarkdown,
+} from "./ai-guards";
 
 export type AiReplyResult = {
   reply: string;
@@ -24,52 +41,21 @@ type ReplySafety = {
   appendPolicyQualifier?: boolean;
   appendInstallationQualifier?: boolean;
   offTopic?: boolean;
+  optOut?: boolean;
 };
 
-const DOMAIN_SCOPE =
-  /\b(?:su|water|arıt|arit|purif|filter|filtre|biohidrogen|bio.?hidrogen|ea global|alkali|orp|hidrojen|hydrogen|pompa|pump|garanti|warranty|kurulum|install|cihaz|device|mineral|çinko|cinko|bakır|bakir|zinc|copper|b12|iade|refund|fiyat|price|iban|nsf|sgs|katalog|catalog|ürün|urun|product|tezgah|baby|canlı|canli|ölü su|olu su|seramik|zeolit|turmalin|maifan|atık|atik|taksit|havale|kargo|orijinal|bayilik|franchise|kampanya|kampany|memnuniyet|danışman|danisman|müşteri|musteri|servis|service|filtreleme|ph|antioksidan|antioxidant|sahil|coastal|deprem|earthquake)/i;
-
-const OBVIOUS_OFF_TOPIC =
-  /\b(?:bitcoin|kripto|crypto|stock market|borsa hissesi|hava(?:\s+durumu)?|weather|yemek tarifi|recipe for|football score|futbol maç|maç skoru|siyaset|politics|seçim sonucu|write (?:me )?(?:code|python|javascript|sql)|kod yaz|ödev yap|homework|şaka anlat|tell (?:me )?a joke|netflix|film öner|spam|hack|jailbreak|ignore (?:your|all) instructions)/i;
-
-function normaliseKnowledgeQuery(value: string) {
-  let normalised = value
-    .replace(/\bfıltre\b/gi, "filtre")
-    .replace(/\bdegısım\b/gi, "değişim")
-    .replace(/\bzamnı\b/gi, "zamanı")
-    .replace(/\binstalation\b/gi, "installation")
-    .replace(/\btomorow\b/gi, "tomorrow");
-  // Expand the short pump question with the approved technical concepts so
-  // retrieval remains auditable even when the visitor uses only "second floor".
-  if (/\b(pump|pompa)/i.test(normalised)) {
-    normalised += " pump pompa second floor ikinci kat coastal kıyı earthquake deprem";
-  }
-  return normalised;
-}
-
-function isBriefAck(message: string) {
-  return /^(?:yes|no|evet|hayır|hayir|merhaba|selam|hello|hi|hey|teşekkür(?:ler)?|tesekkur(?:ler)?|thanks|thank you|rica ederim|ok|tamam|günaydın|gunaydin|iyi akşamlar|iyi aksamlar)$/i.test(
-    message.trim(),
-  );
-}
-
-/** Reject random / out-of-scope chats; keep Biohidrogen water-treatment only. */
-export function isOffTopicMessage(message: string) {
-  const text = normaliseKnowledgeQuery(message).toLocaleLowerCase("tr-TR").trim();
-  if (!text || isBriefAck(text)) return false;
-  if (OBVIOUS_OFF_TOPIC.test(text)) return true;
-  if (DOMAIN_SCOPE.test(text)) return false;
-  // Short vague interest ("bilgi alabilir miyim?") stays in scope.
-  if (/\b(bilgi|info|yardım|yardim|help|destek|support|ürün|urun|product|cihaz)\b/i.test(text) && text.split(/\s+/).length <= 10) {
-    return false;
-  }
-  // Any other multi-word ask without product domain is out of scope.
-  return text.split(/\s+/).length >= 3;
-}
-
 function replySafety(message: string, locale: "tr" | "en"): ReplySafety {
-  const text = normaliseKnowledgeQuery(message).toLocaleLowerCase("tr-TR");
+  const text = foldText(normaliseKnowledgeQuery(message));
   const isTurkish = locale === "tr";
+  if (isOptOutMessage(message)) {
+    return {
+      forceHandoff: false,
+      optOut: true,
+      replacement: isTurkish
+        ? "İsteğinizi kaydettim. Sizinle bir daha iletişime geçmeyeceğiz. İyi günler dilerim."
+        : "I have recorded your request. We will not contact you again. Take care.",
+    };
+  }
   if (isOffTopicMessage(message)) {
     return {
       forceHandoff: false,
@@ -80,18 +66,15 @@ function replySafety(message: string, locale: "tr" | "en"): ReplySafety {
     };
   }
   const human = /\b(insan|temsilci|human|agent|adviser|advisor|sales)\b/.test(text);
-  const commercial = /\b(fiyat|price|teklif|quote|indirim|discount|taksit|payment|ödeme|delivery|teslimat|iban|banka|bank account|havale|eft)\b/.test(text);
-  // Do not treat an ordinary "water-treatment device" product question as a
-  // medical request. Health safeguards are reserved for an actual condition,
-  // cure, diagnosis, or treatment claim.
-  const health = /(diyabet|diabetes|migren|migraine|cure|tedavi|hastalık|disease)/.test(text);
-  const service = /(filtre|filter|bakım|maintenance|arıza|fault|replacement|değişim|değiştir)/.test(text);
-  const scheduledInstallation = /(schedule|tomorrow|appointment|randevu|planla|installation.*(?:when|tomorrow)|kurulum.*(?:ne zaman|yarın))/.test(text);
-  const technical = /(pump|pompa|wifi|wi-fi)/.test(text);
+  const commercial = isCommercialIntent(message);
+  const health = /\b(diyabet|diabetes|migren|migraine|cure|tedavi|hastalik|disease|tibbi|medical|hekim|doktor|doctor|hastane|hospital|hucresel|cellular renewal|risk sifir|risk-free|risk free|sifa|cure-like)\b/.test(text);
+  const service = /\b(filtre|filter|bakim|maintenance|ariza|fault|replacement|degisim|degistir)\b/.test(text);
+  const scheduledInstallation = /\b(schedule|tomorrow|appointment|randevu|planla)\b/.test(text) || /kurulum.*(?:ne zaman|yarin)/.test(text);
+  const technical = /\b(pump|pompa|wifi|wi-fi)\b/.test(text);
   const policy = /\b(iade|refund|return|warranty|garanti)\b/.test(text);
-  const unconfirmedCoverage = /\b(outside turkey|outside türkiye|international|abroad|yurt dış|yurtdış)\b/.test(text);
+  const unconfirmedCoverage = /\b(outside turkey|outside turkiye|international|abroad|yurt dis)\b/.test(text);
   const installationCoverage = /(kurulum.*(?:hangi il|81 il)|installation.*(?:where|which (?:city|cities)|81))/.test(text);
-  const productFaq = /(what (?:kinds|types|products)|what do (?:you|u) have|hangi tür.*cihaz)/.test(text);
+  const productFaq = /(what (?:kinds|types|products)|what do (?:you|u) have|hangi tur.*cihaz)/.test(text);
 
   if (unconfirmedCoverage) {
     return {
@@ -134,10 +117,10 @@ function replySafety(message: string, locale: "tr" | "en"): ReplySafety {
 
 function applyReplySafety(params: { message: string; locale: "tr" | "en"; reply: string; handoff: boolean; hasSources?: boolean }) {
   const safety = replySafety(params.message, params.locale);
-  let reply = safety.replacement || params.reply;
+  let reply = stripMarkdown(safety.replacement || params.reply);
   const briefReply = isBriefAck(params.message);
-  if (safety.offTopic) {
-    return { reply, handoff: false };
+  if (safety.offTopic || safety.optOut) {
+    return { reply, handoff: false, optOut: Boolean(safety.optOut) };
   }
   if (!params.hasSources && !briefReply && !safety.replacement) {
     reply = params.locale === "tr"
@@ -155,7 +138,11 @@ function applyReplySafety(params: { message: string; locale: "tr" | "en"; reply:
       ? " Kurulum, güncel onaylı satış politikası kapsamında 81 ilde ücretsiz olarak sunulur; yetkili ekip uygulamayı teyit eder."
       : " Installation availability is confirmed by the authorised team under the current approved sales policy.";
   }
-  return { reply, handoff: safety.forceHandoff ? true : safety.suppressHandoff ? false : params.handoff };
+  return {
+    reply: stripMarkdown(reply),
+    handoff: safety.forceHandoff ? true : safety.suppressHandoff ? false : params.handoff,
+    optOut: false,
+  };
 }
 
 export async function generateBotReply(params: {
@@ -169,7 +156,7 @@ export async function generateBotReply(params: {
   const tenant = await prisma.tenant.findUnique({ where: { id: params.tenantId }, select: { settings: true } });
   const operations = getOperationsSettings(tenant?.settings);
   const lastUserMessage = params.history.filter((message) => message.role === "user").at(-1)?.content || "";
-  if (isOffTopicMessage(lastUserMessage)) {
+  if (isOptOutMessage(lastUserMessage) || isOffTopicMessage(lastUserMessage)) {
     const safe = applyReplySafety({
       message: lastUserMessage,
       locale: params.locale,
@@ -181,9 +168,10 @@ export async function generateBotReply(params: {
       reply: safe.reply,
       handoff: false,
       scoreDelta: 0,
-      usedModel: "scope-guard",
+      usedModel: safe.optOut ? "opt-out" : "scope-guard",
       latencyMs: Date.now() - startedAt,
       sources: [],
+      qualification: safe.optOut ? { optOut: "true" } : undefined,
     };
   }
   let sources: KnowledgeSource[] = [];
@@ -224,8 +212,9 @@ SADECE su arıtma cihazları, filtreler, kurulum, garanti, canlı/alkali su ve o
 Konu dışı (hava, siyaset, kod, şaka, kripto vb.) sorularda ürün kapsamına yönlendir; uydurma cevap verme.
 Önce onaylı bilgi bankasındaki somut gerçekleri söyle; ardından gerekiyorsa en fazla bir nitelendirme sorusu sor.
 Yalnızca KB'de desteklenen ürün gerçeklerini söyle; KB yeterli değilse insan desteğine yönlendir.
-Kesin fiyat, indirim oranı, IBAN, banka, sözleşme veya teslimat sözü uydurma. Fiyat/teklif/ödeme sorulduğunda handoff=true yap.
-Tıbbi tavsiye veya hastalık tedavi vaadi verme. Kısa, açık yanıtlar ver.
+Kesin fiyat, indirim oranı, IBAN, banka, sözleşme veya teslimat sözü uydurma. Fiyat/teklif/ödeme/IBAN sorulduğunda handoff=true yap.
+Tıbbi tavsiye, doktor/hastane onayı veya hastalık tedavi vaadi verme; KB'deki sağlık iddialarını yumuşat veya aktarma.
+Yanıtları düz metin yaz; markdown (**kalın**, listeler) kullanma. Kısa, açık yanıtlar ver.
 Kullanıcı selam verirse veya kısa bir evet/hayır yanıtı yazarsa, konuşma geçmişini dikkate al. Genel selamı tekrarlama.
 ${operations.aiInstructions ? `Yönetici tarafından onaylanan ek talimatlar:\n${operations.aiInstructions}` : ""}
 JSON dön: {"reply":"...","handoff":false,"qualification":{"city":"","need":"","timeline":""},"scoreDelta":0}`
@@ -235,7 +224,9 @@ For off-topic requests (weather, politics, code, jokes, crypto, etc.), steer bac
 When KB sources support an answer, state those facts first, then optionally ask at most one qualifying question.
 Only state product facts supported by the KB; hand off if the KB is insufficient.
 Never invent pricing, discount rates, IBAN/bank details, contracts, delivery promises, or medical advice.
-If the user asks for a person, pricing/quotes, or payment/IBAN details, set handoff=true. Keep replies concise.
+Do not repeat doctor/hospital endorsements or “risk-free” health claims; soften or hand off.
+If the user asks for a person, pricing/quotes, or payment/IBAN details, set handoff=true.
+Reply in plain text only — no markdown. Keep replies concise.
 For a greeting or a brief yes/no reply, use the conversation history. Do not repeat a generic greeting.
 ${operations.aiInstructions ? `Administrator-approved additional instructions:\n${operations.aiInstructions}` : ""}
 Return JSON: {"reply":"...","handoff":false,"qualification":{"city":"","need":"","timeline":""},"scoreDelta":0}`;

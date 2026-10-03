@@ -19,7 +19,7 @@ export async function GET() {
       wonLeads,
       newLeadsToday,
     ] = await Promise.all([
-      prisma.conversation.count({ where: { tenantId, status: "open" } }),
+      prisma.conversation.count({ where: { tenantId, status: { in: ["open", "pending"] } } }),
       prisma.task.count({
         where: { tenantId, status: "open", dueAt: { lt: new Date() } },
       }),

@@ -21,7 +21,9 @@ export async function GET(request: Request) {
           if (closed) return;
           try {
             const [open, unread] = await Promise.all([
-              prisma.conversation.count({ where: { tenantId: session.tenantId, status: "open" } }),
+              prisma.conversation.count({
+                where: { tenantId: session.tenantId, status: { in: ["open", "pending"] } },
+              }),
               prisma.notification.count({
                 where: {
                   tenantId: session.tenantId,

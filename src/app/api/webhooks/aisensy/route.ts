@@ -94,6 +94,7 @@ export async function POST(req: Request) {
           channelType: "whatsapp",
           aiMode: "auto",
           externalThreadId: msg.from,
+          unassignedAt: new Date(),
         },
       });
     }

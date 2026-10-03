@@ -15,7 +15,12 @@ describe("JWT_SECRET", () => {
   });
 
   it("returns encoded secret when set", () => {
-    process.env.JWT_SECRET = "unit-test-secret";
+    process.env.JWT_SECRET = "unit-test-secret-at-least-32-chars!!";
     expect(requireJwtSecretBytes()).toBeInstanceOf(Uint8Array);
+  });
+
+  it("rejects short or placeholder secrets", () => {
+    process.env.JWT_SECRET = "change-me";
+    expect(() => requireJwtSecretBytes()).toThrow(/at least 32/);
   });
 });

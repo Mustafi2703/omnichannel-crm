@@ -102,8 +102,11 @@ export async function POST(req: Request, ctx: Ctx) {
     }
 
     let externalMessageId: string | undefined;
-    let deliveryStatus = "sent";
+    let deliveryStatus = conversation.channelType === "website" ? "pending_visitor" : "sent";
     let deliveryError: string | undefined;
+    if (conversation.channelType === "website" && senderType === "agent") {
+      deliveryStatus = "pending_visitor";
+    }
     if (conversation.channelType === "whatsapp" && senderType === "agent") {
       const lastInbound = [...conversation.messages].reverse().find((message) => message.direction === "inbound");
       const windowOpen = Boolean(lastInbound && lastInbound.createdAt.getTime() > Date.now() - 24 * 60 * 60 * 1000);

@@ -16,9 +16,9 @@ export type NormalizedInbound = {
 
 export function verifyAisensySignature(rawBody: string, signature: string | null) {
   const secret = process.env.AISENSY_WEBHOOK_SECRET;
-  if (!secret) return true; // demo mode: accept
+  // Fail closed: WhatsApp injection is blocked until a webhook secret is configured.
+  if (!secret) return false;
   if (!signature) return false;
-  // Simple shared-secret header check for demo; replace with HMAC if AiSensy provides it
   return signature === secret || signature === `Bearer ${secret}`;
 }
 

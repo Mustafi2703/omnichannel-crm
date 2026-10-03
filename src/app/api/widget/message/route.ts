@@ -1,38 +1,113 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { generateBotReply, logAiUsage } from "@/lib/ai";
+import { generateBotReply, isOptOutMessage, logAiUsage } from "@/lib/ai";
 import { z } from "zod";
 import { apiError } from "@/lib/api";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { runAutomations } from "@/lib/automation";
+import { corsHeaders, normaliseOriginList } from "@/lib/widget-cors";
+
+function resolveAllowedOrigins(tenantSettings: { widgetAllowedOrigins?: string[] }) {
+  const fromTenant = normaliseOriginList(tenantSettings.widgetAllowedOrigins);
+  const fromEnv = normaliseOriginList((process.env.WIDGET_ALLOWED_ORIGINS || "").split(","));
+  // Prefer tenant list when set; always include env list as fallback for CRM demo origins.
+  return fromTenant.length ? [...new Set([...fromTenant, ...fromEnv])] : fromEnv;
+}
+
+async function honourOptOut(params: {
+  tenantId: string;
+  contactId: string;
+  conversationId: string;
+}) {
+  const negative = await prisma.pipelineStage.findFirst({
+    where: { tenantId: params.tenantId, OR: [{ key: "negative" }, { isLost: true }] },
+    orderBy: { position: "asc" },
+  });
+  await prisma.contact.update({
+    where: { id: params.contactId },
+    data: { consentWhatsappMarketing: false, automationPausedAt: new Date() },
+  });
+  await prisma.conversation.update({
+    where: { id: params.conversationId },
+    data: { aiMode: "off", status: "closed", handoffAt: new Date(), unassignedAt: null },
+  });
+  if (negative) {
+    const lead = await prisma.lead.findFirst({ where: { tenantId: params.tenantId, contactId: params.contactId } });
+    if (lead) {
+      await prisma.lead.update({
+        where: { id: lead.id },
+        data: { stageId: negative.id, lostReason: lead.lostReason || "Customer requested no contact" },
+      });
+    }
+  }
+}
 
 export async function POST(req: Request) {
+  const origin = req.headers.get("origin");
+  let bodyJson: unknown;
+  try {
+    bodyJson = await req.json();
+  } catch {
+    return apiError(400, "VALIDATION_ERROR", "Invalid JSON body");
+  }
+
   const limit = await rateLimit(`widget:${clientIp(req)}`, 20);
-  if (!limit.ok) return NextResponse.json({ error: { code: "RATE_LIMITED", message: "Too many requests" } }, { status: 429, headers: { "Retry-After": String(limit.retryAfter) } });
-  const parsed = z.object({ tenantSlug: z.string().max(100).optional(), publicKey: z.string().max(100).optional(), text: z.string().trim().min(1).max(10_000), visitorId: z.string().max(120).optional(), name: z.string().max(160).optional(), locale: z.enum(["tr", "en"]).optional(), utm: z.record(z.string(), z.string().max(500)).optional() }).safeParse(await req.json());
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: { code: "RATE_LIMITED", message: "Too many requests" } },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfter) } },
+    );
+  }
+
+  const parsed = z
+    .object({
+      tenantSlug: z.string().max(100).optional(),
+      publicKey: z.string().max(100).nullish(),
+      text: z.string().trim().min(1).max(10_000),
+      visitorId: z.string().max(120).optional(),
+      name: z.string().max(160).optional(),
+      phone: z.string().max(40).optional(),
+      locale: z.enum(["tr", "en"]).optional(),
+      utm: z.record(z.string(), z.string().max(500)).optional(),
+    })
+    .safeParse(bodyJson);
   if (!parsed.success) return apiError(400, "VALIDATION_ERROR", "A message is required");
+
   const body = parsed.data;
   const slug = body.tenantSlug || "demo-sirket";
   const text = body.text;
   const visitorId = body.visitorId || `web-${Date.now()}`;
-  const name = body.name || "Web Visitor";
+  const name = body.name?.trim() || "Web Visitor";
   const locale = body.locale || "tr";
   const utm = body.utm || {};
 
   const tenant = await prisma.tenant.findUnique({ where: { slug } });
-  if (!tenant) return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
-  const storedKey = (tenant.settings as { widgetPublicKey?: string }).widgetPublicKey;
-  if (storedKey && body.publicKey !== storedKey) return NextResponse.json({ error: { code: "INVALID_WIDGET_KEY", message: "Invalid widget key" } }, { status: 403 });
-  const origin = req.headers.get("origin");
-  const configuredOrigins = (process.env.WIDGET_ALLOWED_ORIGINS || "").split(",").map((value) => value.trim()).filter(Boolean);
-  const tenantSettings = tenant.settings as { widgetAllowedOrigins?: string[] };
-  const allowedOrigins = tenantSettings.widgetAllowedOrigins?.length ? tenantSettings.widgetAllowedOrigins : configuredOrigins;
-  if (origin && allowedOrigins.length && !allowedOrigins.includes(origin)) return NextResponse.json({ error: { code: "ORIGIN_NOT_ALLOWED", message: "This domain is not allowed for the widget" } }, { status: 403 });
+  if (!tenant) {
+    return NextResponse.json({ error: { code: "NOT_FOUND", message: "Tenant not found" } }, { status: 404 });
+  }
+
+  const tenantSettings = tenant.settings as { widgetPublicKey?: string; widgetAllowedOrigins?: string[] };
+  const storedKey = tenantSettings.widgetPublicKey;
+  const publicKey = body.publicKey || undefined;
+  if (storedKey && publicKey !== storedKey) {
+    const allowed = resolveAllowedOrigins(tenantSettings);
+    return NextResponse.json(
+      { error: { code: "INVALID_WIDGET_KEY", message: "Invalid widget key" } },
+      { status: 403, headers: corsHeaders(origin, allowed) },
+    );
+  }
+
+  const allowedOrigins = resolveAllowedOrigins(tenantSettings);
+  if (origin && allowedOrigins.length && !allowedOrigins.includes(origin)) {
+    return NextResponse.json(
+      { error: { code: "ORIGIN_NOT_ALLOWED", message: "This domain is not allowed for the widget" } },
+      { status: 403, headers: corsHeaders(origin, allowedOrigins) },
+    );
+  }
+  const headers = corsHeaders(origin, allowedOrigins);
 
   const identity = await prisma.contactIdentity.findUnique({
-    where: {
-      tenantId_type_value: { tenantId: tenant.id, type: "web_visitor_id", value: visitorId },
-    },
+    where: { tenantId_type_value: { tenantId: tenant.id, type: "web_visitor_id", value: visitorId } },
     include: { contact: true },
   });
 
@@ -42,15 +117,22 @@ export async function POST(req: Request) {
       data: {
         tenantId: tenant.id,
         displayName: name,
+        phone: body.phone || undefined,
         source: utm.gclid || utm.utm_source === "google" ? "google_ads" : "website",
         utmSource: utm.utm_source,
         utmMedium: utm.utm_medium,
         utmCampaign: utm.utm_campaign,
         gclid: utm.gclid,
         landingUrl: utm.landing_url,
-        identities: {
-          create: { tenantId: tenant.id, type: "web_visitor_id", value: visitorId },
-        },
+        identities: { create: { tenantId: tenant.id, type: "web_visitor_id", value: visitorId } },
+      },
+    });
+  } else if ((body.name && contact.displayName === "Web Visitor") || body.phone) {
+    contact = await prisma.contact.update({
+      where: { id: contact.id },
+      data: {
+        ...(body.name && contact.displayName === "Web Visitor" ? { displayName: body.name.trim() } : {}),
+        ...(body.phone && !contact.phone ? { phone: body.phone } : {}),
       },
     });
   }
@@ -70,6 +152,7 @@ export async function POST(req: Request) {
         contactId: contact.id,
         channelType: "website",
         aiMode: "auto",
+        unassignedAt: new Date(),
       },
     });
   }
@@ -84,10 +167,27 @@ export async function POST(req: Request) {
     },
   });
 
+  if (isOptOutMessage(text)) {
+    const reply =
+      locale === "tr"
+        ? "İsteğinizi kaydettim. Sizinle bir daha iletişime geçmeyeceğiz. İyi günler dilerim."
+        : "I have recorded your request. We will not contact you again. Take care.";
+    await honourOptOut({ tenantId: tenant.id, contactId: contact.id, conversationId: conversation.id });
+    await prisma.message.create({
+      data: {
+        tenantId: tenant.id,
+        conversationId: conversation.id,
+        direction: "outbound",
+        senderType: "system",
+        bodyText: reply,
+        aiMeta: { model: "opt-out" },
+      },
+    });
+    return NextResponse.json({ reply, handoff: false, visitorId, conversationId: conversation.id, optOut: true }, { headers });
+  }
+
   let reply =
-    locale === "tr"
-      ? "Mesajınız alındı. Kısa süre içinde dönüş yapacağız."
-      : "Thanks — we received your message.";
+    locale === "tr" ? "Mesajınız alındı. Kısa süre içinde dönüş yapacağız." : "Thanks — we received your message.";
   let handoff = false;
   let aiMeta: object | undefined;
 
@@ -125,34 +225,61 @@ export async function POST(req: Request) {
       model: ai.usedModel,
     });
 
-    const newStage = await prisma.pipelineStage.findFirst({
-      where: { tenantId: tenant.id, key: handoff ? "qualified" : "new" },
-    });
-    if (newStage) {
-      const existing = await prisma.lead.findFirst({
-        where: { tenantId: tenant.id, contactId: contact.id },
+    if (ai.qualification?.optOut === "true") {
+      await honourOptOut({ tenantId: tenant.id, contactId: contact.id, conversationId: conversation.id });
+      handoff = false;
+    } else {
+      const defaultStage = await prisma.pipelineStage.findFirst({
+        where: { tenantId: tenant.id, isWon: false, isLost: false },
+        orderBy: { position: "asc" },
       });
-      if (!existing) {
-        const lead = await prisma.lead.create({
+      const handoffStage =
+        (await prisma.pipelineStage.findFirst({
+          where: { tenantId: tenant.id, key: { in: ["unassigned", "assigned", "new_lead"] }, isWon: false, isLost: false },
+          orderBy: { position: "asc" },
+        })) || defaultStage;
+
+      const stage = handoff ? handoffStage : defaultStage;
+      if (stage) {
+        const existing = await prisma.lead.findFirst({ where: { tenantId: tenant.id, contactId: contact.id } });
+        if (!existing) {
+          const lead = await prisma.lead.create({
+            data: {
+              tenantId: tenant.id,
+              contactId: contact.id,
+              stageId: stage.id,
+              title: `${contact.displayName} — web`,
+              source: contact.source,
+              score: 30 + (ai.scoreDelta || 0),
+              qualification: ai.qualification || {},
+            },
+          });
+          if (handoff) {
+            await runAutomations(tenant.id, "lead_qualified", {
+              leadId: lead.id,
+              contactId: contact.id,
+              conversationId: conversation.id,
+            });
+          }
+        } else if (handoff && existing.stageId !== stage.id) {
+          const current = await prisma.pipelineStage.findFirst({ where: { id: existing.stageId } });
+          if (current && !current.isWon && !current.isLost) {
+            await prisma.lead.update({ where: { id: existing.id }, data: { stageId: stage.id } });
+          }
+        }
+      }
+
+      if (handoff) {
+        await prisma.conversation.update({
+          where: { id: conversation.id },
           data: {
-            tenantId: tenant.id,
-            contactId: contact.id,
-            stageId: newStage.id,
-            title: `${contact.displayName} — web`,
-            source: contact.source,
-            score: 30 + (ai.scoreDelta || 0),
-            qualification: ai.qualification || {},
+            aiMode: "off",
+            handoffAt: new Date(),
+            status: "pending",
+            unassignedAt: conversation.assigneeId ? conversation.unassignedAt : new Date(),
           },
         });
-        if (handoff) await runAutomations(tenant.id, "lead_qualified", { leadId: lead.id, contactId: contact.id, conversationId: conversation.id });
       }
-    }
-
-    if (handoff) {
-      await prisma.conversation.update({
-        where: { id: conversation.id },
-        data: { aiMode: "off", handoffAt: new Date(), status: "pending" },
-      });
     }
   }
 
@@ -171,17 +298,25 @@ export async function POST(req: Request) {
     data: { lastMessageAt: new Date() },
   });
 
-  return NextResponse.json({
-    reply,
-    handoff,
-    visitorId,
-    conversationId: conversation.id,
-    sources: (aiMeta as { sources?: unknown } | undefined)?.sources || [],
-  }, { headers: origin && allowedOrigins.includes(origin) ? { "Access-Control-Allow-Origin": origin, Vary: "Origin" } : {} });
+  return NextResponse.json(
+    {
+      reply,
+      handoff,
+      visitorId,
+      conversationId: conversation.id,
+      sources: (aiMeta as { sources?: unknown } | undefined)?.sources || [],
+    },
+    { headers },
+  );
 }
 
 export async function OPTIONS(req: Request) {
   const origin = req.headers.get("origin") || "";
-  const allowed = (process.env.WIDGET_ALLOWED_ORIGINS || "").split(",").map((value) => value.trim());
-  return new Response(null, { status: 204, headers: allowed.includes(origin) ? { "Access-Control-Allow-Origin": origin, "Access-Control-Allow-Headers": "Content-Type", "Access-Control-Allow-Methods": "POST, OPTIONS", Vary: "Origin" } : {} });
+  const slug = new URL(req.url).searchParams.get("tenant") || process.env.DEFAULT_TENANT_SLUG || "";
+  let allowed = normaliseOriginList((process.env.WIDGET_ALLOWED_ORIGINS || "").split(","));
+  if (slug) {
+    const tenant = await prisma.tenant.findUnique({ where: { slug }, select: { settings: true } });
+    if (tenant) allowed = resolveAllowedOrigins(tenant.settings as { widgetAllowedOrigins?: string[] });
+  }
+  return new Response(null, { status: 204, headers: corsHeaders(origin, allowed) });
 }
