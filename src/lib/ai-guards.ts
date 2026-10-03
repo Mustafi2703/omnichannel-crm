@@ -53,9 +53,10 @@ export function isCommercialIntent(message: string) {
 /** Reject only clearly off-topic chats; payment/IBAN/delivery stay in scope. */
 export function isOffTopicMessage(message: string) {
   const text = foldText(normaliseKnowledgeQuery(message)).trim();
-  if (!text || isBriefAck(text) || isOptOutMessage(message) || isCommercialIntent(message)) return false;
-  if (DOMAIN_SCOPE.test(text)) return false;
+  if (!text || isBriefAck(text) || isOptOutMessage(message)) return false;
+  // Crypto/weather/etc. win over a bare "fiyat/price" commercial match (e.g. "bitcoin fiyatı").
   if (OBVIOUS_OFF_TOPIC.test(text)) return true;
+  if (isCommercialIntent(message) || DOMAIN_SCOPE.test(text)) return false;
   if (/\b(bilgi|info|yardim|help|destek|support|urun|product|cihaz)\b/.test(text) && text.split(/\s+/).length <= 12) {
     return false;
   }

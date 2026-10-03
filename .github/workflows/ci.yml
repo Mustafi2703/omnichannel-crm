@@ -16,12 +16,12 @@ jobs:
     env:
       # Prisma generation validates the datasource shape but does not connect during build.
       DATABASE_URL: postgresql://ci:ci@localhost:5432/omnicrm?schema=public
-      JWT_SECRET: ci-only-not-a-real-secret
+      JWT_SECRET: ci-only-not-a-real-secret-32chars-min
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Use Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
           cache: npm
