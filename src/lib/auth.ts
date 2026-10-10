@@ -81,6 +81,11 @@ export async function getSession(): Promise<SessionUser | null> {
   return read?.session ?? null;
 }
 
+export async function getSessionIssuedAtMs(): Promise<number | null> {
+  const read = await readSession();
+  return read ? read.iat * 1000 : null;
+}
+
 export async function requireSession(options?: { allowPasswordChange?: boolean }) {
   const read = await readSession();
   if (!read) throw new Error("UNAUTHORIZED");

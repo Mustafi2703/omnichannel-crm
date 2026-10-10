@@ -13,6 +13,7 @@ import {
   isOptOutMessage,
   isUngroundedOpening,
   normaliseKnowledgeQuery,
+  requiresConfirmedAnswer,
   scopeReply,
   stripMarkdown,
 } from "./ai-guards";
@@ -125,7 +126,7 @@ function applyReplySafety(params: { message: string; locale: "tr" | "en"; reply:
   if (safety.offTopic || safety.optOut) {
     return { reply, handoff: false, optOut: Boolean(safety.optOut) };
   }
-  if (!params.hasSources && !briefReply && !safety.replacement) {
+  if (!params.hasSources && !briefReply && !safety.replacement && requiresConfirmedAnswer(params.message)) {
     reply = params.locale === "tr"
       ? "Bu konuda onaylı bilgiye ulaşamadım. Güncel bilgiyi teyit etmesi için sizi müşteri danışmanımıza aktarıyorum."
       : "I do not have confirmed information on that topic. I am connecting you with a customer adviser to confirm the current position.";

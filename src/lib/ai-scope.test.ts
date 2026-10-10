@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { foldText, isCommercialIntent, isDiseaseClaim, isOffTopicMessage, isOptOutMessage, isUngroundedOpening, stripMarkdown } from "./ai-guards";
+import { foldText, isCommercialIntent, isDiseaseClaim, isOffTopicMessage, isOptOutMessage, isUngroundedOpening, requiresConfirmedAnswer, stripMarkdown } from "./ai-guards";
 
 describe("foldText / scope", () => {
   it("folds Turkish capitals so IBAN/FILTRE match", () => {
@@ -32,9 +32,15 @@ describe("foldText / scope", () => {
 
   it("scope-guards an opening with no product signal and no knowledge hit", () => {
     expect(isUngroundedOpening("what is the capital of France", { userTurns: 1, hasSources: false })).toBe(true);
+    expect(isUngroundedOpening("write me a poem about the sea", { userTurns: 1, hasSources: false })).toBe(true);
+    expect(isUngroundedOpening("bitcoin fiyatı ne kadar", { userTurns: 1, hasSources: false })).toBe(true);
     expect(isUngroundedOpening("Alkali Premium özellikleri neler?", { userTurns: 1, hasSources: false })).toBe(false);
     expect(isUngroundedOpening("Havale indirimi ne kadar?", { userTurns: 1, hasSources: false })).toBe(false);
+    expect(isUngroundedOpening("bilgi almak istiyorum", { userTurns: 1, hasSources: false })).toBe(false);
     expect(isUngroundedOpening("Ali, 0532 000 00 00", { userTurns: 2, hasSources: false })).toBe(false);
+    expect(requiresConfirmedAnswer("Ali, 0532 000 00 00")).toBe(false);
+    expect(requiresConfirmedAnswer("Garanti süresi nedir?")).toBe(true);
+    expect(requiresConfirmedAnswer("Where can I pay by bank transfer and what is the IBAN?")).toBe(true);
   });
 
   it("hands off disease claims and leaves approved health wording alone", () => {

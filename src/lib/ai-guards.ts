@@ -67,13 +67,23 @@ export function scopeReply(locale: "tr" | "en") {
     : "I can only help with Biohidrogen / EA Global water-treatment products and services. Please ask about devices, filters, installation, or living water.";
 }
 
+function isHelpRequest(message: string) {
+  const text = foldText(message);
+  return /\b(bilgi|info|yardim|help|destek|support)\b/.test(text) && text.split(/\s+/).length <= 12;
+}
+
 /** Opening turn with nothing in the KB and no product or payment signal stays in scope-guard. */
 export function isUngroundedOpening(message: string, opts: { userTurns: number; hasSources: boolean }) {
   if (opts.userTurns !== 1 || opts.hasSources) return false;
   if (!message.trim() || isBriefAck(message) || isOptOutMessage(message) || isDiseaseClaim(message)) return false;
   if (isOffTopicMessage(message)) return true;
-  if (isCommercialIntent(message) || isProductSignal(message)) return false;
+  if (isCommercialIntent(message) || isProductSignal(message) || isHelpRequest(message)) return false;
   return true;
+}
+
+/** Only product or payment questions should become an adviser handoff when retrieval is empty. */
+export function requiresConfirmedAnswer(message: string) {
+  return isCommercialIntent(message) || isProductSignal(message);
 }
 
 /** Reject only clearly off-topic chats; payment/IBAN/delivery stay in scope. */
