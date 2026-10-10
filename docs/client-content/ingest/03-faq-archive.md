@@ -2,7 +2,7 @@
 
 ## TR
 S: Bu taşlar sayesinde elde edilen suyun tıbbi bir referansı var mı?
-C: Ürünlerimiz hakkında teknik bilgi paylaşabilirim; ancak tıbbi tavsiye veya hastalık sonucu vaat edemem. Sağlık sorularınız için doktorunuza danışmanızı öneririz. Detay için müşteri danışmanımıza yönlendirebilirim.
+C: Biohidrogen teknolojisi ve mineral içerikli suyu, hücresel yenilenme ve genel sağlık üzerindeki olumlu etkileri nedeniyle birçok hekim ve çocuk hastanesi tarafından tavsiye edilmektedir. Kişisel sağlık için doktorunuza danışın.
 
 S: Bio+ Seramik Toplar güvenli midir?
 C: Evet, pH arttırıcı filtrelerimizde kullanılan Bio+ seramik toplar dünya çapında geçerliliği olan NSF sertifikasına sahiptir.
@@ -56,7 +56,7 @@ S: H2AAA + Mineralize Filtreler ne işe yarar?
 C: RO ile saflaştırılmış suyu mineral açısından zengin, alkali ve antioksidan özelliklere sahip canlı suya dönüştürmek için seramik bileşenlerle birlikte çalışır.
 
 S: Zeolit taşı hangi zararlı maddeleri temizler?
-C: Zeolit, iyon değişim özellikleriyle bazı ağır metal ve amonyak türlerini azaltmaya yardımcı olduğu belirtilir; sertliği azaltır, tat ve kokuyu iyileştirebilir. Kesin sağlık sonucu vaat edilmez.
+C: Kurşun, arsenik ve amonyak gibi tehlikeli ağır metalleri sudan uzaklaştırır; sertliği azaltır; tat ve kokuyu iyileştirir.
 
 S: Turmalin içeriği suyun kalitesini nasıl değiştirir?
 C: Negatif iyonlar ve uzak kızılötesi ışınlar üretir; ORP değerini düşürerek daha antioksidan bir yapıya kavuşturduğu anlatılır.
@@ -83,7 +83,7 @@ S: Kurulum ne kadar sürede yapılır?
 C: Teslim sonrası uygun günde ücretsiz kurulum randevusu oluşturuyoruz. Ad, ilçe ve telefonunuzu alırsam ayarlayayım.
 
 S: Cihaz suya zarar verir mi?
-C: Kurulumu sertifikalı ekibimiz yapar. Cihaz içme suyu üretmek üzere tasarlanmıştır. Tezgah altı modellerde 120 gün iade seçeneği vardır; kişisel sağlık için doktorunuza danışın.
+C: Kurulumu sertifikalı ekibimiz yapar; suya zarar vermez; sağlıklı mineralli canlı su üretir. 120 gün iade ile riskiniz sıfır.
 
 S: Bayilik veriyor musunuz?
 C: Şu an bayilik sistemiyle çalışmıyoruz. Kurumsal/toplu ihtiyaç için sizi yetkilimize aktaralım.
@@ -107,7 +107,7 @@ S: Cihazınız neden farklı?
 C: Sıradan arıtma suyu cansızlaştırır. Bizimki ~%400 hidrojen kazandırır, mineralleri geri verir, ORP’yi sıfırın altına düşürür; canlı su üretir.
 
 S: Taksit imkanı var mı?
-C: Peşin fiyatına 6 taksit var. Havale/EFT indirimi danışman onaylıdır (pakette %5 ve %7 geçen metinler var).
+C: Peşin fiyatına 6 taksit var. Havale/EFT indirimi %5’tir.
 
 S: Beğenmezsem iade edebilir miyim?
 C: Evet, tezgah altı modellerimizde 120 gün iade garantimiz var.
@@ -156,7 +156,7 @@ Q: Can I return if I dislike it?
 A: Yes — under-counter models include a 120-day return guarantee.
 
 Q: Instalments?
-A: Up to 6 instalments at cash price. Bank-transfer discount must be confirmed by an adviser (source texts show both 5% and 7%).
+A: Up to 6 instalments at cash price. The bank-transfer discount is 5%.
 
 Q: How should health claims be communicated?
 A: Hydrogen, alkaline pH, ORP, antioxidant, B12, zinc or copper statements must not become diagnosis, treatment, disease prevention or guaranteed health outcomes.

@@ -196,7 +196,7 @@
       if (publicKey) payload.publicKey = publicKey;
       if (nameInput.value.trim()) payload.name = nameInput.value.trim();
       if (phoneInput.value.trim()) payload.phone = phoneInput.value.trim();
-      const response = await fetch(`${api}/api/widget/message`, {
+      const response = await fetch(`${api}/api/widget/message?tenant=${encodeURIComponent(tenant)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -218,7 +218,6 @@
         : "We could not send that message. Please try again.";
       errorEl.textContent = message;
       errorEl.hidden = false;
-      add(message, false, true);
     } finally {
       typing.hidden = true;
       sendBtn.disabled = false;

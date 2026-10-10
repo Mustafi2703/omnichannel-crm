@@ -1,0 +1,11 @@
+{
+  "tenantSlug": "ea-global-water",
+  "users": [
+    { "name": "Çağlar Çakıroğlu", "email": "replace-caglar@eacrm.net", "role": "ADMIN", "slaManager": true },
+    { "name": "Gamze Aydın", "email": "replace-gamze@eacrm.net", "role": "AGENT" },
+    { "name": "Eda Çakmak", "email": "replace-eda@eacrm.net", "role": "AGENT" },
+    { "name": "Ahmet Demir", "email": "replace-ahmet@eacrm.net", "role": "AGENT" },
+    { "name": "Ataberk Hoşap", "email": "replace-ataberk@eacrm.net", "role": "AGENT" },
+    { "name": "Talha Özcan", "email": "replace-talha@eacrm.net", "role": "AGENT" }
+  ]
+}

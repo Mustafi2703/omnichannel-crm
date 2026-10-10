@@ -48,7 +48,7 @@ export async function GET(req: Request) {
     where: {
       conversationId: conversation.id,
       direction: "outbound",
-      senderType: { in: ["agent", "system"] },
+      senderType: "agent",
       ...(after ? { createdAt: { gt: new Date(after) } } : {}),
     },
     orderBy: { createdAt: "asc" },

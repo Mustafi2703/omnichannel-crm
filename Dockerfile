@@ -13,6 +13,8 @@ RUN apt-get update \
 COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts --legacy-peer-deps
 COPY . .
+ARG GIT_SHA=unknown
+ENV GIT_SHA=$GIT_SHA
 RUN npm run build
 EXPOSE 3000
 CMD ["npm", "run", "start"]

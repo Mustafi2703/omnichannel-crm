@@ -16,7 +16,7 @@ customer-facing answers instead of raw health or conflicting commercial claims.
 ## Commercial information
 
 - Tezgâh altı products are described as having free installation in all 81 provinces, subject to the current sales policy.
-- The current sales policy supplied by the client includes up to six instalments and a bank-transfer discount. The client must confirm the exact discount before it is shown to customers because the source material contains both 5% and 7% figures.
+- The current sales policy includes up to six instalments and a 5% bank-transfer (havale/EFT) discount.
 - The client supplied a 120-day return policy and a two-year device warranty for under-counter products, with a ten-year spare-parts availability commitment. Confirm the final terms before publishing.
 - Official seller: EA Global Su Arıtma Sistemleri. Official site: www.biohidrogen.com. Contact line: 0850 303 77 76.
 

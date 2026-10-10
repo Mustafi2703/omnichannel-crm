@@ -16,7 +16,13 @@ export async function POST(req: Request) {
   if (!limit.ok) return apiError(429, "RATE_LIMITED", "Too many login attempts");
   // Trim before validating so a harmless paste-space cannot turn a valid
   // address into a failed login attempt.
-  const parsed = z.object({ email: z.string().trim().email().max(254), password: z.string().min(1).max(128) }).safeParse(await req.json());
+  let bodyJson: unknown;
+  try {
+    bodyJson = await req.json();
+  } catch {
+    return apiError(400, "VALIDATION_ERROR", "Invalid JSON body");
+  }
+  const parsed = z.object({ email: z.string().trim().email().max(254), password: z.string().min(1).max(128) }).safeParse(bodyJson);
   if (!parsed.success) return apiError(400, "VALIDATION_ERROR", "Email and password are required");
   const email = parsed.data.email.toLowerCase().trim();
   const password = parsed.data.password;
@@ -39,7 +45,7 @@ export async function POST(req: Request) {
   });
   await setSessionCookie(token);
   return NextResponse.json({
-    user: { id: user.id, email: user.email, name: user.name, role: user.role },
+    user: { id: user.id, email: user.email, name: user.name, role: user.role, mustChangePassword: user.mustChangePassword },
   });
 }
 
@@ -51,5 +57,10 @@ export async function DELETE() {
 export async function GET() {
   const session = await getSession();
   if (!session) return NextResponse.json({ user: null }, { status: 401 });
-  return NextResponse.json({ user: session });
+  const user = await prisma.user.findFirst({
+    where: { id: session.id, tenantId: session.tenantId, isActive: true },
+    select: { mustChangePassword: true },
+  });
+  if (!user) return NextResponse.json({ user: null }, { status: 401 });
+  return NextResponse.json({ user: { ...session, mustChangePassword: user.mustChangePassword } });
 }

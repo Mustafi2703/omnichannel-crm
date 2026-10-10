@@ -32,14 +32,21 @@ async function honourOptOut(params: {
     data: { aiMode: "off", status: "closed", handoffAt: new Date(), unassignedAt: null },
   });
   if (negative) {
-    const lead = await prisma.lead.findFirst({ where: { tenantId: params.tenantId, contactId: params.contactId } });
-    if (lead) {
+    const lead = await prisma.lead.findFirst({
+      where: { tenantId: params.tenantId, contactId: params.contactId },
+      include: { stage: true },
+    });
+    if (lead && !lead.stage.isWon) {
       await prisma.lead.update({
         where: { id: lead.id },
         data: { stageId: negative.id, lostReason: lead.lostReason || "Customer requested no contact" },
       });
     }
   }
+}
+
+function receivedOnly(locale: string) {
+  return locale === "tr" ? "Mesajınız alındı." : "Your message was received.";
 }
 
 export async function POST(req: Request) {
@@ -111,6 +118,24 @@ export async function POST(req: Request) {
     include: { contact: true },
   });
 
+  const phone = body.phone?.trim();
+  const blockedByPhone = phone
+    ? await prisma.contact.findFirst({
+        where: {
+          tenantId: tenant.id,
+          blockedAt: { not: null },
+          OR: [{ phone }, { identities: { some: { type: "phone", value: phone } } }],
+        },
+        select: { id: true },
+      })
+    : null;
+  if (identity?.contact.blockedAt || blockedByPhone) {
+    return NextResponse.json(
+      { reply: receivedOnly(locale), handoff: false, visitorId },
+      { headers },
+    );
+  }
+
   let contact = identity?.contact;
   if (!contact) {
     contact = await prisma.contact.create({
@@ -152,7 +177,6 @@ export async function POST(req: Request) {
         contactId: contact.id,
         channelType: "website",
         aiMode: "auto",
-        unassignedAt: new Date(),
       },
     });
   }
@@ -240,7 +264,8 @@ export async function POST(req: Request) {
         })) || defaultStage;
 
       const stage = handoff ? handoffStage : defaultStage;
-      if (stage) {
+      const scopeGuard = ai.usedModel === "scope-guard";
+      if (stage && !scopeGuard) {
         const existing = await prisma.lead.findFirst({ where: { tenantId: tenant.id, contactId: contact.id } });
         if (!existing) {
           const lead = await prisma.lead.create({

@@ -25,7 +25,8 @@ export default function LoginPage() {
       setError(locale === "tr" ? "Geçersiz giriş" : "Invalid credentials");
       return;
     }
-    router.push("/dashboard");
+    const data = await res.json().catch(() => ({}));
+    router.push(data.user?.mustChangePassword ? "/account" : "/dashboard");
     router.refresh();
   }
 

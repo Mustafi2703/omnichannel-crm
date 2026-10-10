@@ -27,10 +27,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const tenantSlug =
-    (payload as { tenantSlug?: string }).tenantSlug ||
-    process.env.DEFAULT_TENANT_SLUG ||
-    "demo-sirket";
+  const tenantSlug = process.env.DEFAULT_TENANT_SLUG || "demo-sirket";
   const tenant = await prisma.tenant.findUnique({ where: { slug: tenantSlug } });
   if (!tenant) return NextResponse.json({ error: "Tenant missing" }, { status: 404 });
 
@@ -39,6 +36,23 @@ export async function POST(req: Request) {
 
   for (const msg of inbound) {
     if (!msg.from || !msg.text) continue;
+
+    const blocked = await prisma.contact.findFirst({
+      where: {
+        tenantId: tenant.id,
+        blockedAt: { not: null },
+        OR: [
+          { phone: msg.from },
+          { identities: { some: { type: "whatsapp_id", value: msg.from } } },
+          { identities: { some: { type: "phone", value: msg.from } } },
+        ],
+      },
+      select: { id: true },
+    });
+    if (blocked) {
+      results.push({ skipped: "blocked" });
+      continue;
+    }
 
     const existing = await prisma.message.findFirst({
       where: { tenantId: tenant.id, externalMessageId: msg.externalMessageId },
@@ -94,7 +108,6 @@ export async function POST(req: Request) {
           channelType: "whatsapp",
           aiMode: "auto",
           externalThreadId: msg.from,
-          unassignedAt: new Date(),
         },
       });
     }
@@ -153,7 +166,12 @@ export async function POST(req: Request) {
       if (ai.handoff) {
         await prisma.conversation.update({
           where: { id: conversation.id },
-          data: { aiMode: "off", handoffAt: new Date(), status: "pending" },
+          data: {
+            aiMode: "off",
+            handoffAt: new Date(),
+            status: "pending",
+            unassignedAt: conversation.assigneeId ? conversation.unassignedAt : new Date(),
+          },
         });
       }
     }

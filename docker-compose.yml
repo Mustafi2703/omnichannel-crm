@@ -1,7 +1,10 @@
 services:
   app:
     image: omnicrm:staging
-    build: .
+    build:
+      context: .
+      args:
+        GIT_SHA: ${GIT_SHA:-unknown}
     env_file: .env
     # Keep the app private until a TLS reverse proxy and domain are configured.
     ports: ["127.0.0.1:3000:3000"]

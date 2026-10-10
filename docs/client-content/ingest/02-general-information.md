@@ -8,7 +8,7 @@ Resmi satıcı: EA Global Su Arıtma Sistemleri. Resmi site: www.biohidrogen.com
 WhatsApp/Telefon: 0850 303 77 76.
 
 ## Türkçe — Kampanyalar ve ödeme
-Sürekli avantaj: peşin fiyatına 6 taksit; havale/EFT indirimi müşteri paketinde %5 (bazı metinlerde %7) geçer — AI kesin oran uydurmaz, danışman teyit eder.
+Sürekli avantaj: peşin fiyatına 6 taksit; havale/EFT indirimi %5’tir.
 Tezgahaltı cihazlarda 81 il ücretsiz kurulum ve 120 gün iade.
 Ücretsiz kargo. Kurulum gerektiren ürünlerde teslim sonrası kurulum randevusu.
 
@@ -35,7 +35,7 @@ Branch: Izmir Alsancak. Service in 81 provinces. No franchise/dealer network.
 Official seller: EA Global Water Treatment Systems. Site: www.biohidrogen.com. Phone/WhatsApp: 0850 303 77 76.
 
 ## English — Offers and payment
-Ongoing advantages: up to 6 instalments at cash price; bank-transfer discount appears as 5% in some client text and 7% in others — AI must not invent the rate; adviser confirms.
+Ongoing advantages: up to 6 instalments at cash price; the bank-transfer discount is 5%.
 Under-counter units: free installation in 81 provinces and 120-day return.
 Free shipping. Installation appointment after delivery when required.
 
