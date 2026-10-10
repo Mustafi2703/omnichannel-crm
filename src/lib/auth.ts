@@ -57,32 +57,45 @@ export async function clearSessionCookie() {
   jar.delete(COOKIE);
 }
 
-export async function getSession(): Promise<SessionUser | null> {
+async function readSession() {
   const jar = await cookies();
   const token = jar.get(COOKIE)?.value;
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, secret());
-    return {
+    const session: SessionUser = {
       id: String(payload.sub),
       tenantId: String(payload.tenantId),
       email: String(payload.email),
       name: String(payload.name),
       role: payload.role as Role,
     };
+    return { session, iat: typeof payload.iat === "number" ? payload.iat : 0 };
   } catch {
     return null;
   }
 }
 
-export async function requireSession() {
-  const session = await getSession();
-  if (!session) throw new Error("UNAUTHORIZED");
+export async function getSession(): Promise<SessionUser | null> {
+  const read = await readSession();
+  return read?.session ?? null;
+}
+
+export async function requireSession(options?: { allowPasswordChange?: boolean }) {
+  const read = await readSession();
+  if (!read) throw new Error("UNAUTHORIZED");
   const user = await prisma.user.findFirst({
-    where: { id: session.id, tenantId: session.tenantId, isActive: true },
+    where: { id: read.session.id, tenantId: read.session.tenantId, isActive: true },
+    select: { mustChangePassword: true, passwordChangedAt: true },
   });
   if (!user) throw new Error("UNAUTHORIZED");
-  return session;
+  if (user.passwordChangedAt && read.iat * 1000 + 2000 < user.passwordChangedAt.getTime()) {
+    throw new Error("UNAUTHORIZED");
+  }
+  if (user.mustChangePassword && !options?.allowPasswordChange) {
+    throw new Error("PASSWORD_CHANGE_REQUIRED");
+  }
+  return read.session;
 }
 
 export async function requireRole(...roles: Role[]) {

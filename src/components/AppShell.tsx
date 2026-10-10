@@ -59,11 +59,13 @@ export function AppShell({
   locale,
   onLocale,
   userName,
+  mustChangePassword = false,
 }: {
   children: React.ReactNode;
   locale: Locale;
   onLocale: (l: Locale) => void;
   userName?: string;
+  mustChangePassword?: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -71,13 +73,24 @@ export function AppShell({
   const [notifications, setNotifications] = useState<{ id: string; title: string; body?: string | null }[]>([]);
   const [openNotifications, setOpenNotifications] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const lockedOut = mustChangePassword && !pathname.startsWith("/account");
   async function loadNotifications() { const response = await fetch("/api/notifications"); const data = await response.json(); const rows = data.notifications || []; setNotifications(rows); setUnread(rows.filter((item: { readAt?: string | null }) => !item.readAt).length); }
-  useEffect(() => { void loadNotifications(); const source = new EventSource("/api/realtime"); source.addEventListener("summary", (event) => { const data = JSON.parse(event.data) as { unread?: number }; setUnread(data.unread || 0); }); return () => source.close(); }, []);
+  useEffect(() => {
+    if (mustChangePassword) return;
+    void loadNotifications();
+    const source = new EventSource("/api/realtime");
+    source.addEventListener("summary", (event) => { const data = JSON.parse(event.data) as { unread?: number }; setUnread(data.unread || 0); });
+    return () => source.close();
+  }, [mustChangePassword]);
+  useEffect(() => {
+    if (lockedOut) router.replace("/account");
+  }, [lockedOut, router]);
   useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
 
   useEffect(() => {
+    if (mustChangePassword) return;
     const timer = window.setTimeout(() => {
       nav.forEach((item) => {
         router.prefetch(item.href);
@@ -85,7 +98,7 @@ export function AppShell({
       });
     }, 800);
     return () => window.clearTimeout(timer);
-  }, [router]);
+  }, [router, mustChangePassword]);
 
   async function logout() {
     clearClientJsonCache();
@@ -131,7 +144,7 @@ export function AppShell({
               <Languages className="h-4 w-4" />
               {locale === "tr" ? "English" : "Türkçe"}
             </button>
-            <div className="px-3 text-xs text-slate-500">{userName}</div>
+            <Link href="/account" className="block px-3 text-xs text-slate-300 hover:text-white">{userName}</Link>
             <button
               onClick={logout}
               className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-300 hover:bg-white/5"
@@ -199,7 +212,7 @@ export function AppShell({
               <Languages className="h-4 w-4" />
               {locale === "tr" ? "English" : "Türkçe"}
             </button>
-            <div className="px-3 text-xs text-slate-500">{userName}</div>
+            <Link href="/account" className="block px-3 text-xs text-slate-300 hover:text-white">{userName}</Link>
             <button
               onClick={logout}
               className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-300 hover:bg-white/5"
@@ -221,7 +234,7 @@ export function AppShell({
               <Menu className="h-5 w-5" />
             </button>
           </div>
-          <div className="mx-auto max-w-7xl p-4 md:p-8"><div className="mb-3 flex justify-end"><div className="relative"><button onClick={() => { setOpenNotifications(!openNotifications); void loadNotifications(); }} className="relative rounded-lg border border-slate-200 bg-white p-2" aria-label="Notifications"><Bell className="h-4 w-4" />{unread ? <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-red-600 px-1 text-[9px] text-white">{unread}</span> : null}</button>{openNotifications ? <div className="absolute right-0 z-20 mt-2 w-80 rounded-xl border border-slate-200 bg-white p-2 shadow-xl">{notifications.length ? notifications.slice(0, 8).map((n) => <button key={n.id} onClick={async () => { await fetch("/api/notifications", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: n.id }) }); void loadNotifications(); }} className="block w-full rounded-lg p-2 text-left hover:bg-slate-50"><div className="text-sm font-semibold">{n.title}</div><div className="text-xs text-slate-500">{n.body}</div></button>) : <div className="p-3 text-sm text-slate-500">No notifications</div>}</div> : null}</div></div>{children}</div>
+          <div className="mx-auto max-w-7xl p-4 md:p-8">{mustChangePassword ? null : <div className="mb-3 flex justify-end"><div className="relative"><button onClick={() => { setOpenNotifications(!openNotifications); void loadNotifications(); }} className="relative rounded-lg border border-slate-200 bg-white p-2" aria-label="Notifications"><Bell className="h-4 w-4" />{unread ? <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-red-600 px-1 text-[9px] text-white">{unread}</span> : null}</button>{openNotifications ? <div className="absolute right-0 z-20 mt-2 w-80 rounded-xl border border-slate-200 bg-white p-2 shadow-xl">{notifications.length ? notifications.slice(0, 8).map((n) => <button key={n.id} onClick={async () => { await fetch("/api/notifications", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: n.id }) }); void loadNotifications(); }} className="block w-full rounded-lg p-2 text-left hover:bg-slate-50"><div className="text-sm font-semibold">{n.title}</div><div className="text-xs text-slate-500">{n.body}</div></button>) : <div className="p-3 text-sm text-slate-500">No notifications</div>}</div> : null}</div></div>}{lockedOut ? null : children}</div>
         </main>
       </div>
     </div>

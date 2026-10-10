@@ -47,6 +47,7 @@ export function fromApiError(error: unknown) {
   if (error instanceof z.ZodError) return apiError(400, "VALIDATION_ERROR", "Invalid request",);
   const message = error instanceof Error ? error.message : "Internal server error";
   if (message === "UNAUTHORIZED") return apiError(401, "UNAUTHORIZED", "Authentication is required");
+  if (message === "PASSWORD_CHANGE_REQUIRED") return apiError(403, "PASSWORD_CHANGE_REQUIRED", "Change your password before continuing");
   if (message === "FORBIDDEN") return apiError(403, "FORBIDDEN", "You do not have permission");
   console.error(error);
   return apiError(500, "INTERNAL_ERROR", "Unexpected server error");

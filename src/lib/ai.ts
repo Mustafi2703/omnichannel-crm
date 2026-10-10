@@ -8,17 +8,22 @@ import {
   foldText,
   isBriefAck,
   isCommercialIntent,
+  isDiseaseClaim,
   isOffTopicMessage,
   isOptOutMessage,
+  isUngroundedOpening,
   normaliseKnowledgeQuery,
+  scopeReply,
   stripMarkdown,
 } from "./ai-guards";
 
 export {
   foldText,
   isCommercialIntent,
+  isDiseaseClaim,
   isOffTopicMessage,
   isOptOutMessage,
+  isUngroundedOpening,
   stripMarkdown,
 } from "./ai-guards";
 
@@ -60,14 +65,12 @@ function replySafety(message: string, locale: "tr" | "en"): ReplySafety {
     return {
       forceHandoff: false,
       offTopic: true,
-      replacement: isTurkish
-        ? "Ben yalnızca Biohidrogen / EA Global su arıtma ürünleri ve hizmetleri hakkında yardımcı olabilirim. Cihaz, filtre, kurulum veya canlı su hakkında sorabilirsiniz."
-        : "I can only help with Biohidrogen / EA Global water-treatment products and services. Please ask about devices, filters, installation, or living water.",
+      replacement: scopeReply(locale),
     };
   }
   const human = /\b(insan|temsilci|human|agent|adviser|advisor|sales)\b/.test(text);
   const commercial = isCommercialIntent(message);
-  const health = /\b(diyabet|diabetes|migren|migraine|cure|tedavi|hastalik|disease|tibbi|medical|hekim|doktor|doctor|hastane|hospital|hucresel|cellular renewal|risk sifir|risk-free|risk free|sifa|cure-like)\b/.test(text);
+  const health = isDiseaseClaim(message);
   const service = /\b(filtre|filter|bakim|maintenance|ariza|fault|replacement|degisim|degistir)\b/.test(text);
   const scheduledInstallation = /\b(schedule|tomorrow|appointment|randevu|planla)\b/.test(text) || /kurulum.*(?:ne zaman|yarin)/.test(text);
   const technical = /\b(pump|pompa|wifi|wi-fi)\b/.test(text);
@@ -156,6 +159,7 @@ export async function generateBotReply(params: {
   const tenant = await prisma.tenant.findUnique({ where: { id: params.tenantId }, select: { settings: true } });
   const operations = getOperationsSettings(tenant?.settings);
   const lastUserMessage = params.history.filter((message) => message.role === "user").at(-1)?.content || "";
+  const userTurns = params.history.filter((message) => message.role === "user").length;
   if (isOptOutMessage(lastUserMessage) || isOffTopicMessage(lastUserMessage)) {
     const safe = applyReplySafety({
       message: lastUserMessage,
@@ -201,6 +205,16 @@ export async function generateBotReply(params: {
   } catch (error) {
     console.error("Knowledge retrieval failed", error);
   }
+  if (isUngroundedOpening(lastUserMessage, { userTurns, hasSources: sources.length > 0 })) {
+    return {
+      reply: scopeReply(params.locale),
+      handoff: false,
+      scoreDelta: 0,
+      usedModel: "scope-guard",
+      latencyMs: Date.now() - startedAt,
+      sources: [],
+    };
+  }
   const kb = sources
     .map((source, index) => `[${index + 1}] ${source.title}\n${source.content}`)
     .join("\n\n");
@@ -212,8 +226,8 @@ SADECE su arıtma cihazları, filtreler, kurulum, garanti, canlı/alkali su ve o
 Konu dışı (hava, siyaset, kod, şaka, kripto vb.) sorularda ürün kapsamına yönlendir; uydurma cevap verme.
 Önce onaylı bilgi bankasındaki somut gerçekleri söyle; ardından gerekiyorsa en fazla bir nitelendirme sorusu sor.
 Yalnızca KB'de desteklenen ürün gerçeklerini söyle; KB yeterli değilse insan desteğine yönlendir.
-Kesin fiyat, indirim oranı, IBAN, banka, sözleşme veya teslimat sözü uydurma. Fiyat/teklif/ödeme/IBAN sorulduğunda handoff=true yap.
-Tıbbi tavsiye, doktor/hastane onayı veya hastalık tedavi vaadi verme; KB'deki sağlık iddialarını yumuşat veya aktarma.
+Kesin fiyat, indirim oranı, IBAN, banka, sözleşme veya teslimat sözü uydurma. Fiyat/teklif/ödeme/IBAN sorulduğunda handoff=true yap. Havale indirimi KB'de %5 ise %5 de; %7 deme.
+Hastalık, tedavi, şifa veya kür iddiası yapma; bu sorularda handoff=true yap. KB'de onaylanmış sağlık ifadelerini olduğu gibi aktarabilirsin.
 Yanıtları düz metin yaz; markdown (**kalın**, listeler) kullanma. Kısa, açık yanıtlar ver.
 Kullanıcı selam verirse veya kısa bir evet/hayır yanıtı yazarsa, konuşma geçmişini dikkate al. Genel selamı tekrarlama.
 ${operations.aiInstructions ? `Yönetici tarafından onaylanan ek talimatlar:\n${operations.aiInstructions}` : ""}
@@ -223,8 +237,8 @@ ONLY discuss water-treatment devices, filters, installation, warranty, living/al
 For off-topic requests (weather, politics, code, jokes, crypto, etc.), steer back to product scope; do not invent answers.
 When KB sources support an answer, state those facts first, then optionally ask at most one qualifying question.
 Only state product facts supported by the KB; hand off if the KB is insufficient.
-Never invent pricing, discount rates, IBAN/bank details, contracts, delivery promises, or medical advice.
-Do not repeat doctor/hospital endorsements or “risk-free” health claims; soften or hand off.
+Never invent pricing, IBAN/bank details, contracts, or delivery promises. The bank-transfer discount in the KB is 5%; never say 7%. Hand off price, quote, payment, and IBAN questions.
+Do not claim to treat, cure, or heal a disease. You may repeat health wording the knowledge base already states.
 If the user asks for a person, pricing/quotes, or payment/IBAN details, set handoff=true.
 Reply in plain text only — no markdown. Keep replies concise.
 For a greeting or a brief yes/no reply, use the conversation history. Do not repeat a generic greeting.

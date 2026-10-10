@@ -16,9 +16,11 @@ export function useLocale() {
 export function ClientProviders({
   children,
   userName,
+  mustChangePassword = false,
 }: {
   children: React.ReactNode;
   userName?: string;
+  mustChangePassword?: boolean;
 }) {
   const [locale, setLocale] = useState<Locale>("tr");
   useEffect(() => {
@@ -31,7 +33,7 @@ export function ClientProviders({
   }
   return (
     <LocaleCtx.Provider value={{ locale, setLocale: change }}>
-      <AppShell locale={locale} onLocale={change} userName={userName}>
+      <AppShell locale={locale} onLocale={change} userName={userName} mustChangePassword={mustChangePassword}>
         {children}
       </AppShell>
     </LocaleCtx.Provider>
