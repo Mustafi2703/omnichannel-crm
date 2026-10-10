@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { readFile } from "node:fs/promises";
 import { cleanKnowledgeText, ingestKnowledgeDocument } from "../src/lib/knowledge";
-import { isKnowledgeCategory } from "../src/lib/knowledge-categories";
+import { HUMAN_ONLY_CATEGORIES, isKnowledgeCategory } from "../src/lib/knowledge-categories";
 import { prisma } from "../src/lib/prisma";
 
 async function main() {
@@ -14,6 +14,9 @@ async function main() {
 
   const category = categoryArg || "general_information";
   if (!isKnowledgeCategory(category)) throw new Error(`Invalid knowledge category: ${category}`);
+  if ((HUMAN_ONLY_CATEGORIES as readonly string[]).includes(category)) {
+    throw new Error("Human-only documents are not indexed. Use npm run iban:load for IBAN details.");
+  }
 
   const tenant = await prisma.tenant.findUnique({ where: { slug: tenantSlug }, select: { id: true, slug: true } });
   if (!tenant) throw new Error(`Tenant not found: ${tenantSlug}`);

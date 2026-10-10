@@ -86,6 +86,14 @@ export async function ingestKnowledgeDocument(documentId: string, tenantId: stri
   try {
     const document = await prisma.knowledgeDocument.findFirst({ where: { id: documentId, tenantId } });
     if (!document) throw new Error("Knowledge document not found");
+    if ((HUMAN_ONLY_CATEGORIES as readonly string[]).includes(document.category)) {
+      await prisma.knowledgeChunk.deleteMany({ where: { documentId: document.id } });
+      await prisma.knowledgeDocument.update({
+        where: { id: document.id },
+        data: { status: "ready", errorMessage: null, embeddingModel: null, embeddingIndexId: null },
+      });
+      return;
+    }
     const chunks = chunkKnowledgeText(document.content);
     if (!chunks.length) throw new Error("No readable text was found in this document");
 

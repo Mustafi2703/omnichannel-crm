@@ -22,6 +22,8 @@
     "db:setup": "prisma db push && tsx prisma/seed.ts",
     "tenant:provision": "tsx scripts/provision-client-tenant.ts",
     "users:provision": "tsx scripts/provision-users.ts",
+    "iban:load": "tsx scripts/load-human-iban.ts",
+    "client:settings": "tsx scripts/apply-client-settings.ts",
     "embeddings:prepare": "tsx scripts/prepare-embedding-index.ts",
     "postinstall": "prisma generate"
   },

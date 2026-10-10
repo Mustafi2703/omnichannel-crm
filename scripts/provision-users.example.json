@@ -1,11 +1,11 @@
 {
-  "tenantSlug": "ea-global-water",
+  "tenantSlug": "ea-global-water-staging",
   "users": [
-    { "name": "Çağlar Çakıroğlu", "email": "replace-caglar@eacrm.net", "role": "ADMIN", "slaManager": true },
-    { "name": "Gamze Aydın", "email": "replace-gamze@eacrm.net", "role": "AGENT" },
-    { "name": "Eda Çakmak", "email": "replace-eda@eacrm.net", "role": "AGENT" },
-    { "name": "Ahmet Demir", "email": "replace-ahmet@eacrm.net", "role": "AGENT" },
-    { "name": "Ataberk Hoşap", "email": "replace-ataberk@eacrm.net", "role": "AGENT" },
-    { "name": "Talha Özcan", "email": "replace-talha@eacrm.net", "role": "AGENT" }
+    { "name": "Çağlar Çakıroğlu", "email": "caglar.cakiroglu@biohidrogen.com", "role": "ADMIN", "slaManager": true },
+    { "name": "Gamze Aydın", "email": "gamze.aydin@biohidrogen.com", "role": "AGENT" },
+    { "name": "Eda Çakmak", "email": "eda.cakmak@biohidrogen.com", "role": "AGENT" },
+    { "name": "Ahmet Demir", "email": "ahmet.demir@biohidrogen.com", "role": "AGENT" },
+    { "name": "Ataberk Hoşap", "email": "ataberk.hosap@biohidrogen.com", "role": "AGENT" },
+    { "name": "Talha Özcan", "email": "talha.ozcan@biohidrogen.com", "role": "AGENT" }
   ]
 }

@@ -249,6 +249,22 @@ export default function InboxPage() {
                 >
                   AI
                 </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const response = await fetch("/api/knowledge/payment-details");
+                    const data = await response.json().catch(() => ({}));
+                    if (!response.ok || !data.text) {
+                      setComposerError(locale === "tr" ? "Ödeme bilgisi henüz yok." : "Payment details are not available yet.");
+                      return;
+                    }
+                    setComposerError("");
+                    setText((current) => (current ? `${current}\n${data.text}` : data.text));
+                  }}
+                  className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold"
+                >
+                  {locale === "tr" ? "Ödeme bilgisi" : "Payment details"}
+                </button>
                 <label className="cursor-pointer rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold">{locale === "tr" ? "Dosya" : "File"}<input className="hidden" type="file" accept="image/jpeg,image/png,image/webp,application/pdf,text/plain" onChange={(e) => setAttachment(e.target.files?.[0] || null)} /></label>
                 {attachment ? <button disabled={loading} onClick={uploadAttachment} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold">{locale === "tr" ? "Yükle" : "Upload"}</button> : null}
               </div>

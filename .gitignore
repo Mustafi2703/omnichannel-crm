@@ -35,6 +35,7 @@ yarn-error.log*
 .env
 .env*.local
 scripts/provision-users.local.json
+scripts/iban.local.json
 
 # vercel / render
 .vercel
