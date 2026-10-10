@@ -50,7 +50,7 @@ export function isOptOutMessage(message: string) {
 
 export function isCommercialIntent(message: string) {
   const text = foldText(message);
-  return /\b(fiyat|price|teklif|quote|indirim|discount|taksit|payment|odeme|delivery|teslimat|iban|banka|bank account|havale|eft|randevu|appointment)\b/.test(text);
+  return /\b(fiyat\w*|price|teklif\w*|quote|indirim\w*|discount|taksit\w*|ucret\w*|payment|odeme\w*|delivery|teslimat\w*|iban|banka\w*|bank account|havale|eft|randevu\w*|appointment)\b/.test(text);
 }
 
 export function isProductSignal(message: string) {

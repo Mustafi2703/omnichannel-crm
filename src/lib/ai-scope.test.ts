@@ -17,6 +17,8 @@ describe("foldText / scope", () => {
     expect(isOffTopicMessage("Pompalı mı pompasız mı? Sahildeyim.")).toBe(false);
     expect(isCommercialIntent("IBAN nedir?")).toBe(true);
     expect(isCommercialIntent("Havale indirimi")).toBe(true);
+    expect(isCommercialIntent("Biohidrogen cihazın fiyatı nedir?")).toBe(true);
+    expect(isCommercialIntent("ücreti ne kadar")).toBe(true);
   });
 
   it("blocks random off-topic chats", () => {
