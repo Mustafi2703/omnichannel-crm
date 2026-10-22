@@ -4,6 +4,7 @@ import { prisma } from "./lib/prisma";
 import { notify } from "./lib/notifications";
 import { runAutomations } from "./lib/automation";
 import { enqueueAutomation } from "./lib/queue";
+import { inboxUrl } from "./lib/app-url";
 import { getOperationsSettings, type OperationsSettings } from "./lib/tenant-settings";
 import { processDueCampaigns } from "./lib/campaigns";
 
@@ -24,7 +25,7 @@ async function notifyManagers(params: { conversation: SlaConversation; title: st
     where: { id: params.conversation.contactId },
     select: { displayName: true },
   });
-  const body = `${params.body} Contact: ${contact?.displayName || "Unknown"}. Open: /inbox?c=${params.conversation.id}`;
+  const body = `${params.body} Contact: ${contact?.displayName || "Unknown"}. Open: ${inboxUrl(params.conversation.id)}`;
   await Promise.all(
     recipients.map((userId) =>
       notify({ tenantId: params.conversation.tenantId, userId, type: params.type, title: params.title, body }),
