@@ -109,6 +109,9 @@ C: Sıradan arıtma suyu cansızlaştırır. Bizimki ~%400 hidrojen kazandırır
 S: Taksit imkanı var mı?
 C: Peşin fiyatına 6 taksit var. Havale/EFT indirimi %5’tir.
 
+S: Havale/EFT indirimi ne kadar?
+C: Havale/EFT indirimi %5’tir.
+
 S: Beğenmezsem iade edebilir miyim?
 C: Evet, tezgah altı modellerimizde 120 gün iade garantimiz var.
 
@@ -157,6 +160,9 @@ A: Yes — under-counter models include a 120-day return guarantee.
 
 Q: Instalments?
 A: Up to 6 instalments at cash price. The bank-transfer discount is 5%.
+
+Q: Is there a discount for paying by bank transfer?
+A: Yes. The bank-transfer (havale/EFT) discount is 5%.
 
 Q: How should health claims be communicated?
 A: Hydrogen, alkaline pH, ORP, antioxidant, B12, zinc or copper statements must not become diagnosis, treatment, disease prevention or guaranteed health outcomes.

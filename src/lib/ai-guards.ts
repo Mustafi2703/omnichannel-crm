@@ -14,7 +14,7 @@ export function foldText(value: string) {
 }
 
 const DOMAIN_SCOPE =
-  /\b(?:su|water|arit|purif|filter|filtre|biohidrogen|bio.?hidrogen|ea global|alkali|orp|hidrojen|hydrogen|pompa|pump|garanti|warranty|kurulum|install|cihaz|device|mineral|cinko|bakir|zinc|copper|b12|iade|refund|fiyat|price|iban|nsf|sgs|katalog|catalog|urun|product|tezgah|baby|canli|olu su|seramik|zeolit|turmalin|maifan|atik|taksit|havale|kargo|orijinal|bayilik|franchise|kampanya|memnuniyet|danisman|musteri|servis|service|filtreleme|ph\b|antioksidan|antioxidant|sahil|coastal|deprem|earthquake|teslimat|delivery|odeme|payment|randevu|appointment|siparis|magaza|calisma)/i;
+  /\b(?:su|water|arit|purif|filter|filtre|biohidrogen|bio.?hidrogen|ea global|alkali|orp|hidrojen|hydrogen|pompa|pump|garanti|warranty|kurulum|install|cihaz|device|mineral|cinko|bakir|zinc|copper|b12|iade|refund|fiyat|price|iban|nsf|sgs|katalog|catalog|urun|product|tezgah|baby|canli|olu su|seramik|zeolit|turmalin|maifan|atik|taksit|havale|kargo|orijinal|bayilik|franchise|kampanya|memnuniyet|danisman|musteri|servis|service|filtreleme|ph\b|antioksidan|antioxidant|sahil|coastal|deprem|earthquake|teslimat|delivery|odeme|payment|randevu|appointment|siparis|magaza|calisma|adres|address|telefon|phone|konum|location|sube|branch|ofis|office|iletisim|contact|sertifika|certificate)/i;
 
 const OBVIOUS_OFF_TOPIC =
   /\b(?:bitcoin|kripto|crypto|stock market|borsa hissesi|hava durumu|\bhava\b(?!le)|weather|yemek tarifi|recipe for|football score|futbol mac|mac skoru|siyaset|politics|secim sonucu|write (?:me )?(?:code|python|javascript|sql|a poem|poem)|kod yaz|siir yaz|odev yap|homework|saka anlat|tell (?:me )?a joke|netflix|film oner|spam|hack|jailbreak|ignore (?:your|all)(?:\s+\w+){0,3}\s+instructions|system prompt|capital of|baskent|philosophy|sunny in)\b/i;
@@ -35,6 +35,10 @@ export function normaliseKnowledgeQuery(value: string) {
   if (/\b(pump|pompa)/i.test(normalised)) {
     normalised += " pump pompa second floor ikinci kat coastal kıyı earthquake deprem";
   }
+  // A short discount question scores below the retrieval cut-off against the instalment FAQ; widen it the same way.
+  if (/\b(havale|eft|bank transfer|wire transfer|indirim|discount)/i.test(normalised)) {
+    normalised += " havale EFT indirimi %5 bank transfer discount 5% taksit instalments";
+  }
   return normalised;
 }
 
@@ -50,7 +54,7 @@ export function isOptOutMessage(message: string) {
 
 export function isCommercialIntent(message: string) {
   const text = foldText(message);
-  return /\b(fiyat\w*|price|teklif\w*|quote|indirim\w*|discount|taksit\w*|ucret\w*|payment|odeme\w*|delivery|teslimat\w*|iban|banka\w*|bank account|havale|eft|randevu\w*|appointment)\b/.test(text);
+  return /\b(fiyat\w*|price|teklif\w*|quote|indirim\w*|discount|taksit\w*|ucret\w*|payment|odeme\w*|delivery|teslimat\w*|iban|banka\w*|bank account|bank transfer|wire transfer|wire|pay|paying|paid|credit card|kredi kart\w*|nakit|cash|havale|eft|randevu\w*|appointment)\b/.test(text);
 }
 
 export function isProductSignal(message: string) {

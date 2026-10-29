@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { foldText, isCommercialIntent, isDiseaseClaim, isOffTopicMessage, isOptOutMessage, isUngroundedOpening, requiresConfirmedAnswer, stripMarkdown } from "./ai-guards";
+import { foldText, isCommercialIntent, isDiseaseClaim, isOffTopicMessage, isOptOutMessage, isUngroundedOpening, normaliseKnowledgeQuery, requiresConfirmedAnswer, stripMarkdown } from "./ai-guards";
 
 describe("foldText / scope", () => {
   it("folds Turkish capitals so IBAN/FILTRE match", () => {
@@ -49,6 +49,24 @@ describe("foldText / scope", () => {
     expect(isDiseaseClaim("Bu cihaz diyabeti tedavi eder mi?")).toBe(true);
     expect(isDiseaseClaim("hekimler tavsiye ediyor mu")).toBe(false);
     expect(isDiseaseClaim("çocuk hastanesinde kullanılır mı")).toBe(false);
+  });
+
+  it("keeps payment and contact questions in scope on the opening turn (they hand off, never get the scope refusal)", () => {
+    for (const q of ["Can I pay by bank transfer?", "Do you accept wire transfer?", "Can I pay by credit card?", "Kredi kartı geçiyor mu?", "Adresiniz nedir?", "What is your phone number?"]) {
+      expect(isUngroundedOpening(q, { userTurns: 1, hasSources: false })).toBe(false);
+    }
+    expect(isCommercialIntent("Can I pay by bank transfer?")).toBe(true);
+    expect(isCommercialIntent("Do you accept wire transfer?")).toBe(true);
+    expect(isUngroundedOpening("Write me a poem about the sea", { userTurns: 1, hasSources: false })).toBe(true);
+    expect(isUngroundedOpening("Fransa'nın başkenti neresi?", { userTurns: 1, hasSources: false })).toBe(true);
+  });
+
+  it("widens short discount questions so the 5% FAQ entry is retrieved, and leaves other queries alone", () => {
+    const widened = normaliseKnowledgeQuery("Havale indirimi ne kadar?");
+    expect(widened).toContain("%5");
+    expect(widened).toContain("taksit");
+    expect(normaliseKnowledgeQuery("Is there a discount for bank transfer?")).toContain("5%");
+    expect(normaliseKnowledgeQuery("Filtre ne zaman değişir?")).toBe("Filtre ne zaman değişir?");
   });
 
   it("detects opt-out without treating as off-topic", () => {
