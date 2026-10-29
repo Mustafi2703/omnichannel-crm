@@ -13,9 +13,32 @@ const operationsSchema = z.object({
     firstCallAfterMinutes: 30,
     noCallAfterMinutes: 180,
   }),
+  // Staff alerts only fire inside these hours (tenant time zone). Days: 0 = Sunday … 6 = Saturday.
+  businessHours: z.object({
+    days: z.array(z.number().int().min(0).max(6)).max(7).default([1, 2, 3, 4, 5, 6]),
+    start: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).default("09:30"),
+    end: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).default("18:30"),
+  }).default({ days: [1, 2, 3, 4, 5, 6], start: "09:30", end: "18:30" }),
 });
 
 export type OperationsSettings = z.infer<typeof operationsSchema>;
+
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const toSeconds = (hhmm: string) => Number(hhmm.slice(0, 2)) * 3600 + Number(hhmm.slice(3, 5)) * 60;
+
+/** When today's business hours began, or null while closed. */
+export function businessOpenedAt(now: Date, hours: OperationsSettings["businessHours"], timeZone: string) {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-US", { timeZone, weekday: "short", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" })
+      .formatToParts(now)
+      .map((part) => [part.type, part.value]),
+  );
+  const seconds = Number(parts.hour) * 3600 + Number(parts.minute) * 60 + Number(parts.second);
+  const start = toSeconds(hours.start);
+  if (!hours.days.includes(WEEKDAYS.indexOf(parts.weekday)) || seconds < start || seconds >= toSeconds(hours.end)) return null;
+  // ponytail: assumes no DST shift between opening and now (Europe/Istanbul has none); do per-zone offset math if a DST tenant appears.
+  return new Date(now.getTime() - now.getMilliseconds() - (seconds - start) * 1000);
+}
 export const DEFAULT_OPERATIONS_SETTINGS: OperationsSettings = operationsSchema.parse({});
 
 export function getOperationsSettings(settings: unknown): OperationsSettings {
