@@ -54,12 +54,12 @@
 
   const style = document.createElement("style");
   style.textContent = `
-#omni-widget-root{--omni-brand:#2563eb;font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}
+#omni-widget-root{--omni-brand:#3871c1;font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}
 .omni-toggle{position:fixed;right:20px;bottom:20px;z-index:2147483647;border:0;border-radius:999px;padding:14px 18px;background:var(--omni-brand);color:#fff;font-weight:700;cursor:pointer;box-shadow:0 10px 30px #0f172a40;display:flex;align-items:center;gap:8px}
 .omni-badge{min-width:18px;height:18px;border-radius:999px;background:#ef4444;color:#fff;font-size:11px;display:inline-flex;align-items:center;justify-content:center;padding:0 5px}
 .omni-panel{position:fixed;right:20px;bottom:76px;z-index:2147483647;width:min(380px,calc(100vw - 24px));height:min(540px,calc(100vh - 110px));background:#fff;border:1px solid #e2e8f0;border-radius:18px;box-shadow:0 18px 50px #0f172a33;overflow:hidden;display:flex;flex-direction:column}
 .omni-panel[hidden],.omni-badge[hidden],.omni-typing[hidden],.omni-error[hidden]{display:none!important}
-.omni-panel header{display:flex;justify-content:space-between;gap:12px;padding:14px 16px;background:linear-gradient(135deg,#0f172a,var(--omni-brand));color:#fff}
+.omni-panel header{display:flex;justify-content:space-between;gap:12px;padding:14px 16px;background:linear-gradient(135deg,#0d2347,var(--omni-brand));color:#fff}
 .omni-panel header strong{display:block;font-size:15px}
 .omni-panel header small{display:block;opacity:.85;font-size:11px;font-weight:500}
 .omni-panel header button{border:0;background:transparent;color:#fff;font-size:22px;line-height:1;cursor:pointer}

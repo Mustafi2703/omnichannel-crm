@@ -3,11 +3,34 @@
 @tailwind utilities;
 
 :root {
-  --background: #f4f6fb;
-  --foreground: #0f172a;
+  --background: #f2f6fb;
+  --foreground: #10213d;
 }
 
 body {
   color: var(--foreground);
-  background: var(--background);
+  background:
+    radial-gradient(900px 420px at 100% -80px, rgba(0, 173, 239, 0.1), transparent 55%),
+    radial-gradient(700px 360px at -10% 110%, rgba(56, 113, 193, 0.08), transparent 60%),
+    var(--background);
+  background-attachment: fixed;
+}
+
+h1 {
+  letter-spacing: -0.035em;
+}
+
+input,
+select,
+textarea {
+  background-color: #fff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: #3871c1;
+  box-shadow: 0 0 0 3px rgb(56 113 193 / 0.16);
 }

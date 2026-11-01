@@ -41,7 +41,7 @@ async function main() {
       timezone: "Europe/Istanbul",
       localeDefault: "tr",
       settings: {
-        brandColor: "#1d4edb",
+        brandColor: "#3871c1",
         welcomeTr: "Merhaba! Size nasıl yardımcı olabiliriz?",
         welcomeEn: "Hello! How can we help you today?",
       },

@@ -2,6 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // Brand PNGs in public/brand are pre-sized, so skip runtime resizing on the server.
+  images: { unoptimized: true },
   async headers() {
     return [
       {

@@ -55,17 +55,17 @@ export default function DashboardPage() {
         {cards.map((c) => (
           <div
             key={c.label}
-            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+            className="rounded-3xl border border-ea-900/10 bg-white p-5 shadow-[0_16px_40px_-28px_rgba(13,35,71,0.55)]"
           >
-            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
               {c.label}
             </div>
-            <div className="mt-2 text-3xl font-black text-slate-900">{c.value}</div>
+            <div className="mt-3 text-3xl font-semibold tracking-tight text-slate-900">{c.value}</div>
           </div>
         ))}
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="rounded-3xl border border-ea-900/10 bg-white p-6 shadow-[0_16px_40px_-28px_rgba(13,35,71,0.55)]">
         <h2 className="text-lg font-bold">{t(locale, "pipeline")}</h2>
         <div className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
           {(data?.pipeline || []).map((s) => (

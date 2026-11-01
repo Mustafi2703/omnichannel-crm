@@ -66,12 +66,12 @@ export default function WidgetSettingsPage() {
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <input
               type="color"
-              value={settings.brandColor || "#2563eb"}
+              value={settings.brandColor || "#3871c1"}
               onChange={(e) => setSettings({ ...settings, brandColor: e.target.value })}
               className="h-10 w-14 cursor-pointer rounded border border-slate-200"
             />
             <input
-              value={settings.brandColor || "#2563eb"}
+              value={settings.brandColor || "#3871c1"}
               onChange={(e) => setSettings({ ...settings, brandColor: e.target.value })}
               placeholder="#rrggbb"
               className="min-w-[8rem] flex-1 rounded border p-2 font-mono text-sm"

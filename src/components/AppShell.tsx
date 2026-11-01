@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -20,6 +21,7 @@ import {
   Languages,
   Menu,
   X,
+  Droplets,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { t, type Locale } from "@/lib/i18n";
@@ -107,52 +109,93 @@ export function AppShell({
     router.refresh();
   }
 
+  const groups = [
+    { label: locale === "tr" ? "Günlük iş" : "Daily work", hrefs: ["/dashboard", "/inbox", "/contacts", "/leads", "/tasks", "/events"] },
+    { label: locale === "tr" ? "Büyüme" : "Growth", hrefs: ["/automations", "/campaigns", "/knowledge"] },
+    { label: locale === "tr" ? "Kurulum" : "Setup", hrefs: ["/widget-settings", "/operations", "/costs", "/widget-demo"] },
+  ];
+
+  function Brand() {
+    return (
+      <Link href="/dashboard" className="block" aria-label={t(locale, "appName")}>
+        <Image src="/brand/ea-global-white.png" alt="EA Global Water Systems" width={900} height={209} priority className="h-auto w-44" />
+        <div className="mt-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-aqua-300/80">{t(locale, "tagline")}</div>
+      </Link>
+    );
+  }
+
+  function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
+    return (
+      <div className="space-y-5">
+        {groups.map((group) => (
+          <div key={group.label}>
+            <div className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-ea-200/50">{group.label}</div>
+            <div className="space-y-0.5">
+              {group.hrefs.map((href) => {
+                const item = nav.find((entry) => entry.href === href);
+                if (!item) return null;
+                const Icon = item.icon;
+                const active = pathname.startsWith(item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={onNavigate}
+                    className={cn(
+                      "relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition",
+                      active
+                        ? "bg-white/10 text-white ring-1 ring-white/10 before:absolute before:left-0 before:top-2 before:h-[calc(100%-1rem)] before:w-1 before:rounded-r before:bg-aqua-400"
+                        : "text-ea-50/75 hover:bg-white/[0.07] hover:text-white",
+                    )}
+                  >
+                    <Icon className={cn("h-4 w-4", active ? "text-aqua-300" : "text-ea-200/60")} />
+                    {t(locale, item.key)}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  function AccountFooter() {
+    return (
+      <div className="space-y-1 border-t border-white/10 p-3">
+        <button
+          onClick={() => onLocale(locale === "tr" ? "en" : "tr")}
+          className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-ea-50/80 hover:bg-white/[0.07]"
+        >
+          <Languages className="h-4 w-4" />
+          {locale === "tr" ? "English" : "Türkçe"}
+        </button>
+        <Link href="/account" className="flex items-center gap-2 truncate rounded-xl px-3 py-2 text-sm font-medium text-white/90 hover:bg-white/[0.07]">
+          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-aqua-500/20 text-xs font-bold text-aqua-200">{(userName || "?").trim().charAt(0).toUpperCase()}</span>
+          <span className="truncate">{userName}</span>
+        </Link>
+        <button
+          onClick={logout}
+          className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-ea-50/80 hover:bg-white/[0.07]"
+        >
+          <LogOut className="h-4 w-4" />
+          {t(locale, "logout")}
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-[#f4f6fb] text-slate-900">
+    <div className="min-h-screen text-slate-900">
       <div className="flex min-h-screen">
-        <aside className="hidden w-64 flex-col border-r border-slate-200 bg-[#0f172a] text-slate-100 md:flex">
-          <div className="border-b border-white/10 px-5 py-5">
-            <div className="text-lg font-bold tracking-tight">{t(locale, "appName")}</div>
-            <div className="mt-1 text-xs text-slate-400">{t(locale, "tagline")}</div>
+        <aside className="sticky top-0 hidden h-screen w-[17.5rem] shrink-0 flex-col bg-gradient-to-b from-ea-950 via-[#112d5a] to-ea-950 text-slate-100 md:flex">
+          <div className="px-5 py-6">
+            <Brand />
           </div>
-          <nav className="flex-1 space-y-1 p-3">
-            {nav.map((item) => {
-              const Icon = item.icon;
-              const active = pathname.startsWith(item.href);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition",
-                    active
-                      ? "bg-blue-600 text-white"
-                      : "text-slate-300 hover:bg-white/5 hover:text-white",
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  {t(locale, item.key)}
-                </Link>
-              );
-            })}
+          <nav className="flex-1 overflow-y-auto px-3 pb-4">
+            <NavLinks />
           </nav>
-          <div className="space-y-2 border-t border-white/10 p-4">
-            <button
-              onClick={() => onLocale(locale === "tr" ? "en" : "tr")}
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-300 hover:bg-white/5"
-            >
-              <Languages className="h-4 w-4" />
-              {locale === "tr" ? "English" : "Türkçe"}
-            </button>
-            <Link href="/account" className="block px-3 text-xs text-slate-300 hover:text-white">{userName}</Link>
-            <button
-              onClick={logout}
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-300 hover:bg-white/5"
-            >
-              <LogOut className="h-4 w-4" />
-              {t(locale, "logout")}
-            </button>
-          </div>
+          <AccountFooter />
         </aside>
         {mobileOpen ? (
           <button
@@ -164,77 +207,68 @@ export function AppShell({
         ) : null}
         <aside
           className={cn(
-            "fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-slate-200 bg-[#0f172a] text-slate-100 transition-transform duration-200 md:hidden",
+            "fixed inset-y-0 left-0 z-50 flex w-[17.5rem] flex-col bg-gradient-to-b from-ea-950 via-[#112d5a] to-ea-950 text-slate-100 transition-transform duration-200 md:hidden",
             mobileOpen ? "translate-x-0" : "-translate-x-full",
           )}
         >
-          <div className="flex items-center justify-between border-b border-white/10 px-5 py-5">
-            <div>
-              <div className="text-lg font-bold tracking-tight">{t(locale, "appName")}</div>
-              <div className="mt-1 text-xs text-slate-400">{t(locale, "tagline")}</div>
-            </div>
+          <div className="flex items-center justify-between px-5 py-5">
+            <Brand />
             <button
               type="button"
               onClick={() => setMobileOpen(false)}
-              className="rounded-lg p-2 text-slate-300 hover:bg-white/5"
+              className="rounded-xl p-2 text-ea-50/80 hover:bg-white/[0.07]"
               aria-label="Close menu"
             >
               <X className="h-5 w-5" />
             </button>
           </div>
-          <nav className="flex-1 space-y-1 overflow-y-auto p-3">
-            {nav.map((item) => {
-              const Icon = item.icon;
-              const active = pathname.startsWith(item.href);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setMobileOpen(false)}
-                  className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition",
-                    active
-                      ? "bg-blue-600 text-white"
-                      : "text-slate-300 hover:bg-white/5 hover:text-white",
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  {t(locale, item.key)}
-                </Link>
-              );
-            })}
+          <nav className="flex-1 overflow-y-auto px-3 pb-4">
+            <NavLinks onNavigate={() => setMobileOpen(false)} />
           </nav>
-          <div className="space-y-2 border-t border-white/10 p-4">
-            <button
-              onClick={() => onLocale(locale === "tr" ? "en" : "tr")}
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-300 hover:bg-white/5"
-            >
-              <Languages className="h-4 w-4" />
-              {locale === "tr" ? "English" : "Türkçe"}
-            </button>
-            <Link href="/account" className="block px-3 text-xs text-slate-300 hover:text-white">{userName}</Link>
-            <button
-              onClick={logout}
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-300 hover:bg-white/5"
-            >
-              <LogOut className="h-4 w-4" />
-              {t(locale, "logout")}
-            </button>
-          </div>
+          <AccountFooter />
         </aside>
-        <main className="flex-1 overflow-auto">
-          <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 md:hidden">
-            <div className="font-bold">{t(locale, "appName")}</div>
-            <button
-              type="button"
-              onClick={() => setMobileOpen(true)}
-              className="rounded-lg border border-slate-200 p-2"
-              aria-label="Open menu"
-            >
-              <Menu className="h-5 w-5" />
-            </button>
-          </div>
-          <div className="mx-auto max-w-7xl p-4 md:p-8">{mustChangePassword ? null : <div className="mb-3 flex justify-end"><div className="relative"><button onClick={() => { setOpenNotifications(!openNotifications); void loadNotifications(); }} className="relative rounded-lg border border-slate-200 bg-white p-2" aria-label="Notifications"><Bell className="h-4 w-4" />{unread ? <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-red-600 px-1 text-[9px] text-white">{unread}</span> : null}</button>{openNotifications ? <div className="absolute right-0 z-20 mt-2 w-80 rounded-xl border border-slate-200 bg-white p-2 shadow-xl">{notifications.length ? notifications.slice(0, 8).map((n) => <button key={n.id} onClick={async () => { await fetch("/api/notifications", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: n.id }) }); void loadNotifications(); }} className="block w-full rounded-lg p-2 text-left hover:bg-slate-50"><div className="text-sm font-semibold">{n.title}</div><div className="text-xs text-slate-500">{n.body}</div></button>) : <div className="p-3 text-sm text-slate-500">No notifications</div>}</div> : null}</div></div>}{lockedOut ? null : children}</div>
+        <main className="flex min-w-0 flex-1 flex-col">
+          <header className="sticky top-0 z-30 flex items-center justify-between border-b border-ea-900/10 bg-white/80 px-4 py-3 backdrop-blur md:px-8">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setMobileOpen(true)}
+                className="rounded-xl border border-ea-900/10 bg-white p-2 shadow-sm md:hidden"
+                aria-label="Open menu"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+              <Image src="/brand/ea-global.png" alt="EA Global Water Systems" width={900} height={209} className="h-auto w-32 md:hidden" />
+              <div className="hidden items-center gap-2 text-sm font-semibold text-ea-900 md:flex">
+                <Droplets className="h-4 w-4 text-aqua-500" />
+                {t(locale, nav.find((item) => pathname.startsWith(item.href))?.key || "dashboard")}
+              </div>
+            </div>
+            {mustChangePassword ? <div /> : (
+              <div className="relative">
+                <button
+                  onClick={() => { setOpenNotifications(!openNotifications); void loadNotifications(); }}
+                  className="relative rounded-xl border border-ea-900/10 bg-white p-2 text-ea-800 shadow-sm hover:bg-ea-50"
+                  aria-label="Notifications"
+                >
+                  <Bell className="h-4 w-4" />
+                  {unread ? <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-rose-600 px-1 text-[9px] text-white">{unread}</span> : null}
+                </button>
+                {openNotifications ? (
+                  <div className="absolute right-0 z-20 mt-2 w-80 overflow-hidden rounded-2xl border border-ea-900/10 bg-white shadow-2xl">
+                    <div className="border-b border-slate-100 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{locale === "tr" ? "Bildirimler" : "Notifications"}</div>
+                    {notifications.length ? notifications.slice(0, 8).map((n) => (
+                      <button key={n.id} onClick={async () => { await fetch("/api/notifications", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: n.id }) }); void loadNotifications(); }} className="block w-full border-b border-slate-50 px-3 py-2.5 text-left last:border-0 hover:bg-ea-50">
+                        <div className="text-sm font-semibold">{n.title}</div>
+                        <div className="text-xs text-slate-500">{n.body}</div>
+                      </button>
+                    )) : <div className="p-4 text-sm text-slate-500">{locale === "tr" ? "Bildirim yok" : "No notifications"}</div>}
+                  </div>
+                ) : null}
+              </div>
+            )}
+          </header>
+          <div className="mx-auto w-full max-w-7xl flex-1 p-4 md:p-8">{lockedOut ? null : children}</div>
         </main>
       </div>
     </div>
