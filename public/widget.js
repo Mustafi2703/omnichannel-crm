@@ -3,6 +3,14 @@
   const api = script?.getAttribute("data-api") || new URL(script?.src || location.href).origin;
   const tenant = script?.getAttribute("data-tenant");
   const publicKey = script?.getAttribute("data-key") || undefined;
+  const privacyUrl = (() => {
+    try {
+      const url = new URL(script?.getAttribute("data-privacy") || "");
+      return /^https?:$/.test(url.protocol) ? url.href : "";
+    } catch {
+      return "";
+    }
+  })();
   if (!tenant || document.getElementById("omni-widget-root")) return;
 
   const storageKey = `omni_widget_${tenant}`;
@@ -65,6 +73,8 @@
 .omni-panel form button{border:0;border-radius:10px;padding:10px 14px;background:var(--omni-brand);color:#fff;font-weight:700;cursor:pointer}
 .omni-panel form button:disabled{opacity:.6;cursor:wait}
 .omni-error{margin:0;padding:0 12px 10px;color:#b91c1c;font-size:12px}
+.omni-privacy{flex:1 1 100%;color:#64748b;font-size:11px;line-height:1.4}
+.omni-privacy a{color:inherit;text-decoration:underline}
 @media (max-width:480px){.omni-panel{right:8px;left:8px;width:auto;bottom:70px}}`;
   document.head.append(style);
   document.body.append(root);
@@ -83,6 +93,18 @@
   const input = root.querySelector(".omni-text");
   const sendBtn = root.querySelector("form button");
   const errorEl = root.querySelector(".omni-error");
+  if (privacyUrl) {
+    const tr = navigator.language.startsWith("tr");
+    const notice = document.createElement("div");
+    notice.className = "omni-privacy";
+    const link = document.createElement("a");
+    link.href = privacyUrl;
+    link.target = "_blank";
+    link.rel = "noopener";
+    link.textContent = tr ? "KVKK Aydınlatma Metni" : "KVKK notice";
+    notice.append(tr ? "Kişisel verileriniz " : "Your personal data is processed as described in our ", link, tr ? " kapsamında işlenir." : ".");
+    form.prepend(notice);
+  }
   let lastPollAt = meta.lastPollAt || new Date(0).toISOString();
   const seenIds = new Set(meta.seenIds || []);
 

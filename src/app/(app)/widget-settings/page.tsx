@@ -115,7 +115,12 @@ export default function WidgetSettingsPage() {
         </button>
       </div>
       {settings.widgetPublicKey ? (
-        <pre className="overflow-auto rounded bg-slate-950 p-4 text-xs text-white">{`<script src="${typeof location !== "undefined" ? location.origin : ""}/widget.js" data-tenant="${slug}" data-key="${settings.widgetPublicKey}" data-api="${typeof location !== "undefined" ? location.origin : ""}"></script>`}</pre>
+        <>
+          <pre className="overflow-auto rounded bg-slate-950 p-4 text-xs text-white">{`<script src="${typeof location !== "undefined" ? location.origin : ""}/widget.js" data-tenant="${slug}" data-key="${settings.widgetPublicKey}" data-api="${typeof location !== "undefined" ? location.origin : ""}"></script>`}</pre>
+          <p className="text-xs text-slate-500">
+            Optional: add <code>{'data-privacy="https://www.biohidrogen.com/kvkk"'}</code> to show a KVKK notice link above the message box.
+          </p>
+        </>
       ) : null}
     </div>
   );
