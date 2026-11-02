@@ -18,6 +18,7 @@ import {
   scopeReply,
   stripMarkdown,
 } from "./ai-guards";
+import { rankKnowledgeAnswers } from "./faq-rank";
 
 export {
   foldText,
@@ -219,7 +220,8 @@ export async function generateBotReply(params: {
       sources: [],
     };
   }
-  const kb = sources
+  const ranked = rankKnowledgeAnswers(lastUserMessage, sources);
+  const kb = ranked
     .map((source, index) => `[${index + 1}] ${source.title}\n${source.content}`)
     .join("\n\n");
 
@@ -228,7 +230,7 @@ export async function generateBotReply(params: {
       ? `Sen Biohidrogen / EA Global su arıtma satış asistanısın.
 SADECE su arıtma cihazları, filtreler, kurulum, garanti, canlı/alkali su ve onaylı KB konuları hakkında konuş.
 Konu dışı (hava, siyaset, kod, şaka, kripto vb.) sorularda ürün kapsamına yönlendir; uydurma cevap verme.
-Yalnızca kullanıcının son mesajını yanıtla. Önceki cevabı tekrarlama. Önce onaylı bilgi bankasındaki somut gerçekleri söyle; ardından gerekiyorsa en fazla bir nitelendirme sorusu sor.
+Yalnızca kullanıcının son mesajını yanıtla. Önceki cevabı tekrarlama. KB maddeleri en uygun eşleşmeden başlayarak sıralıdır. İlk eşleşen maddenin cevabını kullan; başka konudaki sonraki maddeleri kullanma. Ardından gerekiyorsa en fazla bir nitelendirme sorusu sor.
 Yalnızca KB'de desteklenen ürün gerçeklerini söyle; KB yeterli değilse insan desteğine yönlendir.
 Kesin fiyat, indirim oranı, IBAN, banka, sözleşme veya teslimat sözü uydurma. Fiyat/teklif/ödeme/IBAN sorulduğunda handoff=true yap. Havale indirimi KB'de %5 ise %5 de; %7 deme.
 Hastalık, tedavi, şifa veya kür iddiası yapma; bu sorularda handoff=true yap. KB'de onaylanmış sağlık ifadelerini olduğu gibi aktarabilirsin.
@@ -239,7 +241,7 @@ JSON dön: {"reply":"...","handoff":false,"qualification":{"city":"","need":"","
       : `You are the Biohidrogen / EA Global water-treatment sales assistant.
 ONLY discuss water-treatment devices, filters, installation, warranty, living/alkaline water, and approved KB topics.
 For off-topic requests (weather, politics, code, jokes, crypto, etc.), steer back to product scope; do not invent answers.
-Answer only the user's latest message. Do not repeat an earlier answer. When KB sources support an answer, state those facts first, then optionally ask at most one qualifying question.
+Answer only the user's latest message. Do not repeat an earlier answer. Knowledge entries are sorted with the best match first. Use that entry's answer. Do not use a later entry about a different topic. Then optionally ask at most one qualifying question.
 Only state product facts supported by the KB; hand off if the KB is insufficient.
 Never invent pricing, IBAN/bank details, contracts, or delivery promises. The bank-transfer discount in the KB is 5%; never say 7%. Hand off price, quote, payment, and IBAN questions.
 Do not claim to treat, cure, or heal a disease. You may repeat health wording the knowledge base already states.
