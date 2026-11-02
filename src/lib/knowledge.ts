@@ -2,6 +2,7 @@ import mammoth from "mammoth";
 import { PDFParse } from "pdf-parse";
 import { Prisma, type KnowledgeIndex } from "@prisma/client";
 import { createEmbeddings, getEmbeddingConfiguration } from "./embeddings";
+import { foldText } from "./ai-guards";
 import { ALWAYS_INJECT_CATEGORIES, HUMAN_ONLY_CATEGORIES } from "./knowledge-categories";
 import { prisma } from "./prisma";
 
@@ -139,6 +140,35 @@ export async function retrieveKnowledge(params: { tenantId: string; query: strin
       ORDER BY chunk."embedding"::${halfvec} <=> ${vector}::${halfvec} LIMIT ${Math.min(Math.max(params.limit || 5, 1), 8)}`,
   );
   return rows.filter((row) => row.score >= 0.25);
+}
+
+/** Keyword fallback when the vector search misses a short or English wording. */
+export async function searchKnowledgeLexical(params: { tenantId: string; query: string; limit?: number; categories?: string[] }) {
+  const terms = [...new Set(
+    [...params.query.matchAll(/\p{L}{3,}|ph|orp|\d+(?:[.,]\d+)?/giu)].map((match) => foldText(match[0])),
+  )].filter((word) => word.length >= 4 || word === "ph" || word === "orp" || /\d/.test(word)).slice(0, 8);
+  if (!terms.length) return [] as KnowledgeSource[];
+  const { index } = await getActiveKnowledgeIndex(params.tenantId);
+  const categories = (params.categories || []).filter(Boolean);
+  const categoryFilter = categories.length
+    ? Prisma.sql`AND document."category" IN (${Prisma.join(categories)})`
+    : Prisma.sql`AND document."category" NOT IN (${Prisma.join([...HUMAN_ONLY_CATEGORIES])})`;
+  const hits = Prisma.join(
+    terms.map((term) => Prisma.sql`CASE WHEN chunk."content" ILIKE ${"%" + term + "%"} THEN 1 ELSE 0 END`),
+    " + ",
+  );
+  const anyTerm = Prisma.join(
+    terms.map((term) => Prisma.sql`chunk."content" ILIKE ${"%" + term + "%"}`),
+    " OR ",
+  );
+  const rows = await prisma.$queryRaw<KnowledgeSource[]>(
+    Prisma.sql`SELECT chunk."documentId", document."title", chunk."content", (${hits})::float AS "score"
+      FROM "KnowledgeChunk" AS chunk JOIN "KnowledgeDocument" AS document ON document."id" = chunk."documentId"
+      WHERE chunk."tenantId" = ${params.tenantId} AND chunk."indexId" = ${index.id} AND document."status" = 'ready'
+      ${categoryFilter} AND (${anyTerm})
+      ORDER BY (${hits}) DESC LIMIT ${Math.min(Math.max(params.limit || 4, 1), 8)}`,
+  );
+  return rows.filter((row) => row.score > 0);
 }
 
 /** CORE + FUNDAMENTAL (non-IBAN) docs — injected into every AI system prompt. */

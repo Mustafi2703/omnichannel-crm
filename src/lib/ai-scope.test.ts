@@ -76,7 +76,9 @@ describe("foldText / scope", () => {
     expect(widened).toContain("%5");
     expect(widened).toContain("taksit");
     expect(normaliseKnowledgeQuery("Is there a discount for bank transfer?")).toContain("5%");
-    expect(normaliseKnowledgeQuery("Filtre ne zaman değişir?")).toBe("Filtre ne zaman değişir?");
+    expect(normaliseKnowledgeQuery("pH değeri kaç olur?")).toContain("9.5");
+    expect(normaliseKnowledgeQuery("What is the warranty?")).toContain("120");
+    expect(normaliseKnowledgeQuery("Filtre ne zaman değişir?")).toContain("8-12");
   });
 
   it("detects opt-out without treating as off-topic", () => {

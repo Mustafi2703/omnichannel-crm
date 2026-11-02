@@ -13,6 +13,12 @@ C: Ön filtreler (sediment ve karbon) ortalama 8-12 ayda bir; ters ozmoz membran
 S: Ürünlerin garanti süresi ne kadardır?
 C: Tüm Biohidrogen su arıtma cihazları 2 yıl resmi garanti kapsamındadır. Tezgah altı: 120 gün iade.
 
+S: pH test kiti var mı?
+C: Cihaz yanında ücretsiz pH test kiti gönderildiği belirtilir.
+
+S: Standart cihazlardan temel fark nedir?
+C: Biohidrogen pH 9.5'e kadar alkali canlı su anlatılır.
+
 S: Havale/EFT indirimi ne kadar?
 C: Havale/EFT indirimi %5'tir.
 
@@ -42,6 +48,7 @@ describe("rankKnowledgeAnswers", () => {
       ["What is the bank transfer discount?", "5%"],
       ["ORP nedir, Biohidrogen sistemleri hangi değeri hedefler?", "-300"],
       ["What ORP level do the systems target?", "-300"],
+      ["pH değeri kaç olur?", "9.5"],
     ];
     for (const [question, expected] of cases) {
       const [best] = rankKnowledgeAnswers(question, [mixed]);

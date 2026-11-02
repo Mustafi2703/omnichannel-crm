@@ -39,6 +39,10 @@ export function normaliseKnowledgeQuery(value: string) {
   if (/\b(havale|eft|bank transfer|wire transfer|indirim|discount)/i.test(normalised)) {
     normalised += " havale EFT indirimi %5 bank transfer discount 5% taksit instalments";
   }
+  if (/\bph\b/.test(foldText(normalised))) normalised += " pH 9.5 alkali";
+  if (/\b(garanti|warranty|iade|refund|return)\b/.test(foldText(normalised))) normalised += " garanti warranty 2 yil 120 gun return";
+  if (/\borp\b/.test(foldText(normalised))) normalised += " ORP -300 mV";
+  if (/\b(filtre|filter)\b/.test(foldText(normalised))) normalised += " filtre filter 8-12 ay 18-24 month";
   return normalised;
 }
 

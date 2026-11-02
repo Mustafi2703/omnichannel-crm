@@ -22,6 +22,12 @@ function overlap(query: string, text: string) {
   return hits / queryTokens.length;
 }
 
+function asksForMeasure(query: string) {
+  return /\b(kac|ne kadar|deger\w*|seviye|how (?:much|many|often|long)|what (?:is|level)|percent|yuzde|sure\w*)\b/.test(foldText(query));
+}
+
+const FOCUS = ["ph", "orp", "filtre", "filter", "garanti", "warranty", "iade", "return", "havale", "bebek", "baby"];
+
 /** Split a knowledge chunk into individual question/answer pairs. */
 export function splitQaPairs(content: string) {
   const pairs: { question: string; answer: string }[] = [];
@@ -32,6 +38,13 @@ export function splitQaPairs(content: string) {
     if (question && answer) pairs.push({ question, answer });
   }
   return pairs;
+}
+
+export function answerFitsQuestion(query: string, content: string) {
+  const foldedQuery = foldText(query);
+  const folded = foldText(content);
+  const sharedFocus = FOCUS.some((term) => new RegExp(`\\b${term}\\b`).test(foldedQuery) && new RegExp(`\\b${term}\\b`).test(folded));
+  return sharedFocus || overlap(query, content) >= 0.34;
 }
 
 /**
@@ -52,10 +65,20 @@ export function rankKnowledgeAnswers(query: string, sources: RankedSource[], lim
       continue;
     }
     for (const pair of found) {
+      const question = foldText(pair.question);
+      const answer = foldText(pair.answer);
+      let lexical = overlap(query, pair.question) * 2 + overlap(query, pair.answer);
+      for (const term of FOCUS) {
+        const asked = new RegExp(`\\b${term}\\b`).test(foldText(query));
+        if (!asked) continue;
+        if (new RegExp(`\\b${term}\\b`).test(question) || new RegExp(`\\b${term}\\b`).test(answer)) lexical += 1;
+      }
+      if (asksForMeasure(query) && /\d/.test(pair.answer)) lexical += 1;
+      if (asksForMeasure(query) && /\b(var mi|do you have|is there)\b/.test(question)) lexical -= 1;
       pairs.push({
         title: source.title,
         content: `S: ${pair.question}\nC: ${pair.answer}`,
-        lexical: overlap(query, pair.question) * 2 + overlap(query, pair.answer),
+        lexical,
         vector: source.score,
       });
     }

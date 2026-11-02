@@ -1,6 +1,6 @@
 import type { ChatCompletionCreateParamsNonStreaming } from "openai/resources/chat/completions";
 import { prisma } from "./prisma";
-import { loadAlwaysInjectKnowledge, retrieveKnowledge, type KnowledgeSource } from "./knowledge";
+import { loadAlwaysInjectKnowledge, retrieveKnowledge, searchKnowledgeLexical, type KnowledgeSource } from "./knowledge";
 import { CHAT_RETRIEVAL_CATEGORIES } from "./knowledge-categories";
 import { getChatClient } from "./llm";
 import { getOperationsSettings } from "./tenant-settings";
@@ -18,7 +18,7 @@ import {
   scopeReply,
   stripMarkdown,
 } from "./ai-guards";
-import { rankKnowledgeAnswers } from "./faq-rank";
+import { answerFitsQuestion, rankKnowledgeAnswers } from "./faq-rank";
 
 export {
   foldText,
@@ -206,7 +206,18 @@ export async function generateBotReply(params: {
       });
     }
     // Drop weak matches so random questions cannot ride noisy FAQ similarity.
-    sources = sources.filter((source) => source.score >= 0.32);
+    sources = sources.filter((source) => source.score >= 0.28);
+    const rankedNow = rankKnowledgeAnswers(lastUserMessage, sources, 1);
+    if (!rankedNow.length || !answerFitsQuestion(lastUserMessage, rankedNow[0].content)) {
+      const lexical = await searchKnowledgeLexical({
+        tenantId: params.tenantId,
+        query: normaliseKnowledgeQuery(lastUserMessage),
+        limit: 4,
+        categories: [...CHAT_RETRIEVAL_CATEGORIES],
+      });
+      const seen = new Set(sources.map((source) => source.content));
+      sources = [...sources, ...lexical.filter((source) => !seen.has(source.content))];
+    }
   } catch (error) {
     console.error("Knowledge retrieval failed", error);
   }
