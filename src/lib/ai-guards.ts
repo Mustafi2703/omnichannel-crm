@@ -57,6 +57,27 @@ export function isCommercialIntent(message: string) {
   return /\b(fiyat\w*|price|teklif\w*|quote|indirim\w*|discount|taksit\w*|ucret\w*|payment|odeme\w*|delivery|teslimat\w*|iban|banka\w*|bank account|bank transfer|wire transfer|wire|pay|paying|paid|credit card|kredi kart\w*|nakit|cash|havale|eft|randevu\w*|appointment)\b/.test(text);
 }
 
+/**
+ * Approved knowledge-base facts. These stay with the assistant so a later
+ * product question is still answered. Price, IBAN, a quote, or a request
+ * for a person still hands off.
+ */
+export function keepsAssistant(message: string) {
+  const text = foldText(normaliseKnowledgeQuery(message));
+  if (/\b(iban|fiyat\w*|price|teklif\w*|quote|ucret\w*|randevu\w*|appointment)\b/.test(text)) return false;
+  if (/\b(insan|temsilci|danisman|human|agent|adviser|advisor|sales)\b/.test(text)) return false;
+  if (/\b(ariza|fault|bozuk|broken|calismiyor)\b/.test(text)) return false;
+  const discount =
+    /\b(havale|eft|bank transfer|wire transfer)\b/.test(text) &&
+    /\b(indirim\w*|discount|yuzde|kac|ne kadar|how much|percent)\b/.test(text);
+  const policyFaq = /\b(iade|refund|return|warranty|garanti)\b/.test(text);
+  const productFact = /\b(orp|ph\b|sertifika|certificate|nsf|sgs)\b/.test(text);
+  const filterInterval =
+    /\b(filtre\w*|filter\w*)\b/.test(text) &&
+    /\b(sure\w*|ne kadar|kac|siklik|interval|how often|how long|degis\w*|change\w*)\b/.test(text);
+  return discount || policyFaq || productFact || filterInterval;
+}
+
 export function isProductSignal(message: string) {
   return DOMAIN_SCOPE.test(foldText(normaliseKnowledgeQuery(message)));
 }

@@ -124,11 +124,13 @@ export async function POST(req: Request) {
     });
 
     if (conversation.aiMode === "auto") {
-      const history = await prisma.message.findMany({
-        where: { conversationId: conversation.id },
-        orderBy: { createdAt: "asc" },
-        take: 12,
-      });
+      const history = (
+        await prisma.message.findMany({
+          where: { conversationId: conversation.id },
+          orderBy: { createdAt: "desc" },
+          take: 12,
+        })
+      ).reverse();
       const ai = await generateBotReply({
         tenantId: tenant.id,
         contactName: contact.displayName,

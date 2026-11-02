@@ -273,12 +273,6 @@ export default function InboxPage() {
                         {m.senderType}
                       </div>
                       <div className="whitespace-pre-wrap">{m.bodyText}</div>
-                      {m.aiMeta?.sources && m.aiMeta.sources.length > 0 ? (
-                        <div className="mt-1 text-[10px] opacity-70">
-                          {locale === "tr" ? "Kaynak: " : "Sources: "}
-                          {m.aiMeta.sources.map((source) => source.title).join(", ")}
-                        </div>
-                      ) : null}
                       {m.aiMeta?.latencyMs ? (
                         <div className="mt-1 text-[10px] opacity-60">AI {m.aiMeta.model} · {m.aiMeta.latencyMs} ms</div>
                       ) : null}

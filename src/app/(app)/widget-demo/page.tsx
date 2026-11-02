@@ -107,12 +107,6 @@ export default function WidgetDemoPage() {
                 }`}
               >
                 {m.text}
-                {m.sources && m.sources.length > 0 ? (
-                  <div className="mt-2 border-t border-slate-200 pt-1 text-[10px] text-slate-500">
-                    {locale === "tr" ? "Kaynak: " : "Sources: "}
-                    {m.sources.map((source) => source.title).join(", ")}
-                  </div>
-                ) : null}
               </div>
             ))}
           </div>

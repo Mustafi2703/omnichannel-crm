@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { foldText, isCommercialIntent, isDiseaseClaim, isOffTopicMessage, isOptOutMessage, isUngroundedOpening, normaliseKnowledgeQuery, requiresConfirmedAnswer, stripMarkdown } from "./ai-guards";
+import { foldText, isCommercialIntent, isDiseaseClaim, isOffTopicMessage, isOptOutMessage, isUngroundedOpening, keepsAssistant, normaliseKnowledgeQuery, requiresConfirmedAnswer, stripMarkdown } from "./ai-guards";
 
 describe("foldText / scope", () => {
   it("folds Turkish capitals so IBAN/FILTRE match", () => {
@@ -59,6 +59,16 @@ describe("foldText / scope", () => {
     expect(isCommercialIntent("Do you accept wire transfer?")).toBe(true);
     expect(isUngroundedOpening("Write me a poem about the sea", { userTurns: 1, hasSources: false })).toBe(true);
     expect(isUngroundedOpening("Fransa'nın başkenti neresi?", { userTurns: 1, hasSources: false })).toBe(true);
+  });
+
+  it("keeps approved FAQ answers with the assistant and still hands off price, IBAN, and a person", () => {
+    expect(keepsAssistant("Garanti süresi ne kadar, iade süresi nedir?")).toBe(true);
+    expect(keepsAssistant("Havale indirimi yüzde kaç?")).toBe(true);
+    expect(keepsAssistant("ORP nedir, Biohidrogen sistemleri hangi değeri hedefler?")).toBe(true);
+    expect(keepsAssistant("Filtreler ne kadar sürede değiştirilmelidir?")).toBe(true);
+    expect(keepsAssistant("Biohidrogen cihazın fiyatı nedir?")).toBe(false);
+    expect(keepsAssistant("IBAN numarasını gönderir misiniz?")).toBe(false);
+    expect(keepsAssistant("Beni bir temsilciye bağlar mısınız?")).toBe(false);
   });
 
   it("widens short discount questions so the 5% FAQ entry is retrieved, and leaves other queries alone", () => {

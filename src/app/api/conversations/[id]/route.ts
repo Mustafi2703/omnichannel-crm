@@ -44,7 +44,7 @@ export async function POST(req: Request, ctx: Ctx) {
 
     const conversation = await prisma.conversation.findFirst({
       where: { id, tenantId: session.tenantId },
-      include: { contact: true, messages: { orderBy: { createdAt: "asc" }, take: 20 } },
+      include: { contact: true, messages: { orderBy: { createdAt: "desc" }, take: 20 } },
     });
     if (!conversation) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
@@ -64,7 +64,7 @@ export async function POST(req: Request, ctx: Ctx) {
       const contactLocale = (conversation.contact.metadata as { locale?: string } | null)?.locale;
       const tenantLocale = ((await prisma.tenant.findUnique({ where: { id: session.tenantId }, select: { settings: true } }))?.settings as { localeDefault?: string } | null)?.localeDefault;
       const locale = contactLocale === "en" || tenantLocale === "en" ? "en" : "tr";
-      const history = conversation.messages.map((m) => ({
+      const history = [...conversation.messages].reverse().map((m) => ({
         role: (m.direction === "inbound" ? "user" : "assistant") as "user" | "assistant",
         content: m.bodyText,
       }));
@@ -108,7 +108,7 @@ export async function POST(req: Request, ctx: Ctx) {
       deliveryStatus = "pending_visitor";
     }
     if (conversation.channelType === "whatsapp" && senderType === "agent") {
-      const lastInbound = [...conversation.messages].reverse().find((message) => message.direction === "inbound");
+      const lastInbound = conversation.messages.find((message) => message.direction === "inbound");
       const windowOpen = Boolean(lastInbound && lastInbound.createdAt.getTime() > Date.now() - 24 * 60 * 60 * 1000);
       if (!windowOpen && !approvedTemplate) return NextResponse.json({ error: { code: "WHATSAPP_TEMPLATE_REQUIRED", message: "The 24-hour WhatsApp service window has ended. Select an approved template to contact this customer." } }, { status: 409 });
       const send = approvedTemplate

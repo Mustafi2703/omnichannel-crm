@@ -12,6 +12,7 @@ import {
   isOffTopicMessage,
   isOptOutMessage,
   isUngroundedOpening,
+  keepsAssistant,
   normaliseKnowledgeQuery,
   requiresConfirmedAnswer,
   scopeReply,
@@ -76,6 +77,7 @@ function replySafety(message: string, locale: "tr" | "en"): ReplySafety {
   const scheduledInstallation = /\b(schedule|tomorrow|appointment|randevu|planla)\b/.test(text) || /kurulum.*(?:ne zaman|yarin)/.test(text);
   const technical = /\b(pump|pompa|wifi|wi-fi)\b/.test(text);
   const policy = /\b(iade|refund|return|warranty|garanti)\b/.test(text);
+  const answerableFaq = keepsAssistant(message);
   const unconfirmedCoverage = /\b(outside turkey|outside turkiye|international|abroad|yurt dis)\b/.test(text);
   const installationCoverage = /(kurulum.*(?:hangi il|81 il)|installation.*(?:where|which (?:city|cities)|81))/.test(text);
   const productFaq = /(what (?:kinds|types|products)|what do (?:you|u) have|hangi tur.*cihaz)/.test(text);
@@ -111,10 +113,11 @@ function replySafety(message: string, locale: "tr" | "en"): ReplySafety {
       appendPolicyQualifier: false,
     };
   }
+  const hardHandoff = human || commercial || service || scheduledInstallation || technical || policy;
   return {
-    forceHandoff: human || commercial || service || scheduledInstallation || technical || policy,
-    suppressHandoff: productFaq && !(human || commercial || service || scheduledInstallation || technical || policy),
-    appendPolicyQualifier: policy,
+    forceHandoff: hardHandoff && !answerableFaq,
+    suppressHandoff: answerableFaq || (productFaq && !hardHandoff),
+    appendPolicyQualifier: policy && !answerableFaq,
     appendInstallationQualifier: installationCoverage,
   };
 }
@@ -225,7 +228,7 @@ export async function generateBotReply(params: {
       ? `Sen Biohidrogen / EA Global su arıtma satış asistanısın.
 SADECE su arıtma cihazları, filtreler, kurulum, garanti, canlı/alkali su ve onaylı KB konuları hakkında konuş.
 Konu dışı (hava, siyaset, kod, şaka, kripto vb.) sorularda ürün kapsamına yönlendir; uydurma cevap verme.
-Önce onaylı bilgi bankasındaki somut gerçekleri söyle; ardından gerekiyorsa en fazla bir nitelendirme sorusu sor.
+Yalnızca kullanıcının son mesajını yanıtla. Önceki cevabı tekrarlama. Önce onaylı bilgi bankasındaki somut gerçekleri söyle; ardından gerekiyorsa en fazla bir nitelendirme sorusu sor.
 Yalnızca KB'de desteklenen ürün gerçeklerini söyle; KB yeterli değilse insan desteğine yönlendir.
 Kesin fiyat, indirim oranı, IBAN, banka, sözleşme veya teslimat sözü uydurma. Fiyat/teklif/ödeme/IBAN sorulduğunda handoff=true yap. Havale indirimi KB'de %5 ise %5 de; %7 deme.
 Hastalık, tedavi, şifa veya kür iddiası yapma; bu sorularda handoff=true yap. KB'de onaylanmış sağlık ifadelerini olduğu gibi aktarabilirsin.
@@ -236,7 +239,7 @@ JSON dön: {"reply":"...","handoff":false,"qualification":{"city":"","need":"","
       : `You are the Biohidrogen / EA Global water-treatment sales assistant.
 ONLY discuss water-treatment devices, filters, installation, warranty, living/alkaline water, and approved KB topics.
 For off-topic requests (weather, politics, code, jokes, crypto, etc.), steer back to product scope; do not invent answers.
-When KB sources support an answer, state those facts first, then optionally ask at most one qualifying question.
+Answer only the user's latest message. Do not repeat an earlier answer. When KB sources support an answer, state those facts first, then optionally ask at most one qualifying question.
 Only state product facts supported by the KB; hand off if the KB is insufficient.
 Never invent pricing, IBAN/bank details, contracts, or delivery promises. The bank-transfer discount in the KB is 5%; never say 7%. Hand off price, quote, payment, and IBAN questions.
 Do not claim to treat, cure, or heal a disease. You may repeat health wording the knowledge base already states.
