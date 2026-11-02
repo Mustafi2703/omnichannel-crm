@@ -119,9 +119,18 @@ function replySafety(message: string, locale: "tr" | "en"): ReplySafety {
   };
 }
 
-function applyReplySafety(params: { message: string; locale: "tr" | "en"; reply: string; handoff: boolean; hasSources?: boolean }) {
+export function applyReplySafety(params: { message: string; locale: "tr" | "en"; reply: string; handoff: boolean; hasSources?: boolean; cannedReply?: boolean }) {
   const safety = replySafety(params.message, params.locale);
-  let reply = stripMarkdown(safety.replacement || params.reply);
+  // A canned rule-fallback reply answers nothing, so a forced handoff has to say so.
+  const announceHandoff = params.cannedReply && safety.forceHandoff && !params.handoff;
+  let reply = stripMarkdown(
+    safety.replacement ||
+      (announceHandoff
+        ? params.locale === "tr"
+          ? "Bu konuda sizi müşteri danışmanımıza aktarıyorum. Kısa süre içinde dönüş yapacağız."
+          : "I am connecting you with a customer adviser on this. We will get back to you shortly."
+        : params.reply),
+  );
   const briefReply = isBriefAck(params.message);
   if (safety.offTopic || safety.optOut) {
     return { reply, handoff: false, optOut: Boolean(safety.optOut) };
@@ -251,7 +260,7 @@ Return JSON: {"reply":"...","handoff":false,"qualification":{"city":"","need":""
   if (!configuredClient || budget.exceeded) {
     if (budget.exceeded) console.warn("AI monthly budget exceeded; using rule fallback", budget);
     const fallback = ruleBasedFallback(params, kb || foundation);
-    const safe = applyReplySafety({ message: lastUserMessage, locale: params.locale, reply: fallback.reply, handoff: fallback.handoff, hasSources: sources.length > 0 || Boolean(foundation) });
+    const safe = applyReplySafety({ message: lastUserMessage, locale: params.locale, reply: fallback.reply, handoff: fallback.handoff, hasSources: sources.length > 0 || Boolean(foundation), cannedReply: true });
     return { ...fallback, ...safe, sources, latencyMs: Date.now() - startedAt, usedModel: budget.exceeded ? "budget-fallback" : fallback.usedModel };
   }
 
@@ -306,7 +315,7 @@ Return JSON: {"reply":"...","handoff":false,"qualification":{"city":"","need":""
   } catch (err) {
     console.error("LLM completion failed; using rule fallback", err);
     const fallback = ruleBasedFallback(params, kb);
-    const safe = applyReplySafety({ message: lastUserMessage, locale: params.locale, reply: fallback.reply, handoff: fallback.handoff, hasSources: sources.length > 0 });
+    const safe = applyReplySafety({ message: lastUserMessage, locale: params.locale, reply: fallback.reply, handoff: fallback.handoff, hasSources: sources.length > 0, cannedReply: true });
     return { ...fallback, ...safe, sources, latencyMs: Date.now() - startedAt };
   }
 }
