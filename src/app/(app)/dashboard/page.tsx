@@ -1,9 +1,27 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  AlarmClock,
+  GitBranch,
+  LayoutDashboard,
+  MessagesSquare,
+  PiggyBank,
+  Target,
+  TrendingUp,
+  Wallet,
+} from "lucide-react";
 import { useLocale } from "@/components/ClientProviders";
+import { PageHeader } from "@/components/PageHeader";
 import { t } from "@/lib/i18n";
-import { formatMoney } from "@/lib/utils";
+import { cn, formatMoney } from "@/lib/utils";
+
+const TONES = {
+  ea: "bg-gradient-to-br from-ea-600 to-ea-500 text-white shadow-sm shadow-ea-600/25",
+  aqua: "bg-gradient-to-br from-aqua-500 to-ea-500 text-white shadow-sm shadow-aqua-500/25",
+  rose: "bg-rose-50 text-rose-600 ring-1 ring-inset ring-rose-600/10",
+  emerald: "bg-emerald-50 text-emerald-600 ring-1 ring-inset ring-emerald-600/10",
+} as const;
 
 type Dash = {
   openConvos: number;
@@ -29,54 +47,79 @@ export default function DashboardPage() {
 
   const cards = data
     ? [
-        { label: t(locale, "openConversations"), value: data.openConvos },
-        { label: t(locale, "overdue"), value: data.overdueTasks },
-        { label: t(locale, "leadsThisWeek"), value: data.leadsWeek },
-        { label: t(locale, "todayCost"), value: formatMoney(data.todayCost) },
-        { label: t(locale, "costPerLead"), value: formatMoney(data.costPerLead) },
-        { label: t(locale, "margin"), value: formatMoney(data.margin) },
+        { label: t(locale, "openConversations"), value: data.openConvos, icon: MessagesSquare, tone: "ea" },
+        { label: t(locale, "overdue"), value: data.overdueTasks, icon: AlarmClock, tone: "rose" },
+        { label: t(locale, "leadsThisWeek"), value: data.leadsWeek, icon: TrendingUp, tone: "aqua" },
+        { label: t(locale, "todayCost"), value: formatMoney(data.todayCost), icon: Wallet, tone: "ea" },
+        { label: t(locale, "costPerLead"), value: formatMoney(data.costPerLead), icon: Target, tone: "aqua" },
+        { label: t(locale, "margin"), value: formatMoney(data.margin), icon: PiggyBank, tone: "emerald" },
       ]
     : [];
 
+  const pipeline = data?.pipeline || [];
+  const pipelineMax = Math.max(1, ...pipeline.map((s) => s.count));
+
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-black tracking-tight text-slate-900">
-          {t(locale, "dashboard")}
-        </h1>
-        <p className="mt-1 text-sm text-slate-500">
-          {locale === "tr"
+    <div className="space-y-6">
+      <PageHeader
+        icon={LayoutDashboard}
+        title={t(locale, "dashboard")}
+        description={
+          locale === "tr"
             ? "EA Global Water müşteri yönetimi — gelen kutusu, pipeline, yapay zeka ve günlük maliyet."
-            : "EA Global Water customer management — inbox, pipeline, AI, and daily cost."}
-        </p>
-      </div>
+            : "EA Global Water customer management — inbox, pipeline, AI, and daily cost."
+        }
+      />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {cards.map((c) => (
-          <div
-            key={c.label}
-            className="rounded-3xl border border-ea-900/10 bg-white p-5 shadow-[0_16px_40px_-28px_rgba(13,35,71,0.55)]"
-          >
-            <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-              {c.label}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
+        {cards.map((c) => {
+          const Icon = c.icon;
+          return (
+            <div key={c.label} className="ea-card min-w-0 p-4 sm:p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 text-[11px] font-semibold uppercase leading-snug tracking-wide text-slate-500">
+                  {c.label}
+                </div>
+                <div
+                  className={cn(
+                    "grid h-9 w-9 shrink-0 place-items-center rounded-xl sm:h-10 sm:w-10",
+                    TONES[c.tone as keyof typeof TONES],
+                  )}
+                >
+                  <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
+                </div>
+              </div>
+              <div className="mt-3 break-words text-2xl font-bold tracking-tight text-ea-950 tabular-nums sm:text-3xl">
+                {c.value}
+              </div>
             </div>
-            <div className="mt-3 text-3xl font-semibold tracking-tight text-slate-900">{c.value}</div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      <div className="rounded-3xl border border-ea-900/10 bg-white p-6 shadow-[0_16px_40px_-28px_rgba(13,35,71,0.55)]">
-        <h2 className="text-lg font-bold">{t(locale, "pipeline")}</h2>
-        <div className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          {(data?.pipeline || []).map((s) => (
+      <div className="ea-card-pad">
+        <div className="flex items-center gap-2">
+          <div className="grid h-8 w-8 place-items-center rounded-lg bg-ea-50 text-ea-600">
+            <GitBranch className="h-4 w-4" />
+          </div>
+          <h2 className="ea-section-title text-base">{t(locale, "pipeline")}</h2>
+        </div>
+        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+          {pipeline.map((s) => (
             <div
               key={s.key}
-              className="rounded-xl border border-slate-100 bg-slate-50 p-4 text-center"
+              className="min-w-0 rounded-xl border border-ea-900/[0.06] bg-gradient-to-b from-ea-50/70 to-white p-4"
             >
-              <div className="text-xs font-semibold text-slate-500">
+              <div className="truncate text-xs font-semibold text-slate-500">
                 {locale === "tr" ? s.nameTr : s.name}
               </div>
-              <div className="mt-2 text-2xl font-black text-blue-700">{s.count}</div>
+              <div className="mt-2 text-2xl font-bold tabular-nums text-ea-700">{s.count}</div>
+              <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-ea-100">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-ea-600 to-aqua-500"
+                  style={{ width: `${Math.round((s.count / pipelineMax) * 100)}%` }}
+                />
+              </div>
             </div>
           ))}
         </div>

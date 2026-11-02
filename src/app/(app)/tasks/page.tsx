@@ -1,7 +1,18 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
+import {
+  AlertTriangle,
+  CalendarClock,
+  Check,
+  CheckCircle2,
+  Circle,
+  ListChecks,
+  Plus,
+  UserRound,
+} from "lucide-react";
 import { useLocale } from "@/components/ClientProviders";
+import { PageHeader, EmptyState } from "@/components/PageHeader";
 import { t } from "@/lib/i18n";
 import { formatDate, cn } from "@/lib/utils";
 
@@ -77,98 +88,145 @@ export default function TasksPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-black">{t(locale, "tasks")}</h1>
-        <p className="text-sm text-slate-500">
-          {locale === "tr"
+      <PageHeader
+        icon={ListChecks}
+        title={t(locale, "tasks")}
+        description={
+          locale === "tr"
             ? "Takip görevlerini oluşturun, filtreleyin ve tamamlayın."
-            : "Create, filter, and complete follow-up tasks."}
-        </p>
-      </div>
+            : "Create, filter, and complete follow-up tasks."
+        }
+      />
 
-      <form onSubmit={create} className="space-y-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="font-bold">{locale === "tr" ? "Yeni görev" : "New task"}</h2>
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder={locale === "tr" ? "Görev başlığı" : "Task title"}
-          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-          required
-        />
-        <textarea
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          placeholder={locale === "tr" ? "Detay / yorum (isteğe bağlı)" : "Details / comments (optional)"}
-          rows={3}
-          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-        />
-        <div className="flex flex-wrap gap-2">
-          <input
-            type="datetime-local"
-            value={dueAt}
-            onChange={(e) => setDueAt(e.target.value)}
-            className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
-          />
-          <button disabled={busy} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">
-            {busy ? "…" : locale === "tr" ? "Ekle" : "Add task"}
-          </button>
-        </div>
-        {error && <p className="text-sm text-red-600">{error}</p>}
-      </form>
-
-      <div className="flex gap-2">
-        {(["open", "done", "all"] as const).map((key) => (
-          <button
-            key={key}
-            onClick={() => setFilter(key)}
-            className={cn(
-              "rounded-full px-3 py-1.5 text-xs font-bold capitalize",
-              filter === key ? "bg-slate-900 text-white" : "border border-slate-200 bg-white text-slate-600",
-            )}
-          >
-            {key}
-          </button>
-        ))}
-      </div>
-
-      <div className="space-y-3">
-        {tasks.map((task) => {
-          const overdue = task.status === "open" && task.dueAt && new Date(task.dueAt) < new Date();
-          return (
-            <div
-              key={task.id}
-              className={cn(
-                "flex items-center justify-between gap-4 rounded-2xl border bg-white p-4 shadow-sm",
-                overdue ? "border-red-200" : "border-slate-200",
-              )}
-            >
-              <div>
-                <div className="font-semibold">{task.title}</div>
-                {task.body && <p className="mt-1 text-sm text-slate-600">{task.body}</p>}
-                <div className="mt-1 text-xs text-slate-500">
-                  {task.lead?.contact?.displayName || task.assignee?.name || "—"} ·{" "}
-                  {formatDate(task.dueAt, locale === "tr" ? "tr-TR" : "en-US")}
-                  {overdue ? (locale === "tr" ? " · GECİKMİŞ" : " · OVERDUE") : ""}
-                </div>
-              </div>
-              {task.status === "open" ? (
-                <button
-                  onClick={() => complete(task.id)}
-                  className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white"
-                >
-                  Done
-                </button>
-              ) : (
-                <span className="text-xs font-bold uppercase text-emerald-600">Done</span>
-              )}
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
+        <form onSubmit={create} className="ea-card-pad space-y-4 lg:sticky lg:top-24">
+          <div className="flex items-center gap-2">
+            <div className="grid h-8 w-8 place-items-center rounded-lg bg-ea-50 text-ea-600">
+              <Plus className="h-4 w-4" />
             </div>
-          );
-        })}
-        {!tasks.length && (
-          <p className="rounded-2xl border border-dashed border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
-            {locale === "tr" ? "Gösterilecek görev yok." : "No tasks to show."}
-          </p>
-        )}
+            <h2 className="ea-section-title">{locale === "tr" ? "Yeni görev" : "New task"}</h2>
+          </div>
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder={locale === "tr" ? "Görev başlığı" : "Task title"}
+            className="ea-input"
+            required
+          />
+          <textarea
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            placeholder={locale === "tr" ? "Detay / yorum (isteğe bağlı)" : "Details / comments (optional)"}
+            rows={3}
+            className="ea-input resize-y"
+          />
+          <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
+            <input
+              type="datetime-local"
+              value={dueAt}
+              onChange={(e) => setDueAt(e.target.value)}
+              className="ea-input sm:flex-1 lg:flex-none"
+            />
+            <button disabled={busy} className="ea-btn-primary">
+              <Plus className="h-4 w-4" />
+              {busy ? "…" : locale === "tr" ? "Ekle" : "Add task"}
+            </button>
+          </div>
+          {error && (
+            <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>
+          )}
+        </form>
+
+        <div className="min-w-0 space-y-4">
+          <div className="ea-seg">
+            {(["open", "done", "all"] as const).map((key) => (
+              <button
+                key={key}
+                onClick={() => setFilter(key)}
+                className={cn("ea-seg-item capitalize", filter === key && "ea-seg-item-active")}
+              >
+                {key}
+              </button>
+            ))}
+          </div>
+
+          <div className="space-y-3">
+            {tasks.map((task) => {
+              const overdue = task.status === "open" && task.dueAt && new Date(task.dueAt) < new Date();
+              return (
+                <div
+                  key={task.id}
+                  className={cn(
+                    "ea-card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4",
+                    overdue && "border-rose-200 bg-rose-50/30",
+                  )}
+                >
+                  <div className="flex min-w-0 items-start gap-3">
+                    <div
+                      className={cn(
+                        "mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg",
+                        task.status === "open"
+                          ? overdue
+                            ? "bg-rose-50 text-rose-600"
+                            : "bg-ea-50 text-ea-600"
+                          : "bg-emerald-50 text-emerald-600",
+                      )}
+                    >
+                      {task.status === "open" ? (
+                        overdue ? <AlertTriangle className="h-4 w-4" /> : <Circle className="h-4 w-4" />
+                      ) : (
+                        <CheckCircle2 className="h-4 w-4" />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <div
+                        className={cn(
+                          "break-words font-semibold text-ea-950",
+                          task.status !== "open" && "text-slate-500 line-through decoration-slate-300",
+                        )}
+                      >
+                        {task.title}
+                      </div>
+                      {task.body && <p className="mt-1 break-words text-sm text-slate-600">{task.body}</p>}
+                      <div className="mt-2 flex flex-wrap items-center gap-x-1 gap-y-1 text-xs text-slate-500">
+                        <UserRound className="h-3.5 w-3.5 text-slate-400" />
+                        <span>{task.lead?.contact?.displayName || task.assignee?.name || "—"} ·</span>
+                        <CalendarClock className="ml-0.5 h-3.5 w-3.5 text-slate-400" />
+                        <span>{formatDate(task.dueAt, locale === "tr" ? "tr-TR" : "en-US")}</span>
+                        {overdue ? (
+                          <span className="whitespace-pre font-bold text-rose-600">
+                            {locale === "tr" ? " · GECİKMİŞ" : " · OVERDUE"}
+                          </span>
+                        ) : (
+                          ""
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  {task.status === "open" ? (
+                    <button onClick={() => complete(task.id)} className="ea-btn-sm shrink-0 self-start sm:self-auto">
+                      <Check className="h-3.5 w-3.5" />
+                      Done
+                    </button>
+                  ) : (
+                    <span className="inline-flex shrink-0 items-center gap-1 self-start rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold uppercase text-emerald-700 ring-1 ring-inset ring-emerald-600/15 sm:self-auto">
+                      <Check className="h-3 w-3" />
+                      Done
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+            {!tasks.length && (
+              <div className="ea-card border-dashed">
+                <EmptyState
+                  icon={ListChecks}
+                  title={locale === "tr" ? "Gösterilecek görev yok." : "No tasks to show."}
+                />
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

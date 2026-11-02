@@ -186,9 +186,9 @@ export function AppShell({
   }
 
   return (
-    <div className="min-h-screen text-slate-900">
-      <div className="flex min-h-screen">
-        <aside className="sticky top-0 hidden h-screen w-[17.5rem] shrink-0 flex-col bg-gradient-to-b from-ea-950 via-[#112d5a] to-ea-950 text-slate-100 md:flex">
+    <div className="h-dvh overflow-hidden text-slate-900">
+      <div className="flex h-full">
+        <aside className="hidden h-full w-[17.5rem] shrink-0 flex-col bg-gradient-to-b from-ea-950 via-[#112d5a] to-ea-950 text-slate-100 md:flex">
           <div className="px-5 py-6">
             <Brand />
           </div>
@@ -227,7 +227,7 @@ export function AppShell({
           </nav>
           <AccountFooter />
         </aside>
-        <main className="flex min-w-0 flex-1 flex-col">
+        <main id="app-scroll" className="flex min-w-0 flex-1 flex-col overflow-y-auto overscroll-contain">
           <header className="sticky top-0 z-30 flex items-center justify-between border-b border-ea-900/10 bg-white/80 px-4 py-3 backdrop-blur md:px-8">
             <div className="flex items-center gap-3">
               <button
@@ -245,7 +245,11 @@ export function AppShell({
               </div>
             </div>
             {mustChangePassword ? <div /> : (
-              <div className="relative">
+              <div className="relative flex items-center gap-3">
+                <Link href="/account" className="hidden items-center gap-2 rounded-xl px-2 py-1 text-sm font-medium text-ea-900 hover:bg-ea-50 sm:flex">
+                  <span className="grid h-7 w-7 place-items-center rounded-full bg-gradient-to-br from-ea-600 to-aqua-500 text-xs font-bold text-white">{(userName || "?").trim().charAt(0).toUpperCase()}</span>
+                  <span className="max-w-40 truncate">{userName}</span>
+                </Link>
                 <button
                   onClick={() => { setOpenNotifications(!openNotifications); void loadNotifications(); }}
                   className="relative rounded-xl border border-ea-900/10 bg-white p-2 text-ea-800 shadow-sm hover:bg-ea-50"
@@ -255,7 +259,7 @@ export function AppShell({
                   {unread ? <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-rose-600 px-1 text-[9px] text-white">{unread}</span> : null}
                 </button>
                 {openNotifications ? (
-                  <div className="absolute right-0 z-20 mt-2 w-80 overflow-hidden rounded-2xl border border-ea-900/10 bg-white shadow-2xl">
+                  <div className="absolute right-0 top-full z-20 mt-2 max-h-[70vh] w-[min(22rem,calc(100vw-2rem))] overflow-y-auto rounded-2xl border border-ea-900/10 bg-white shadow-2xl">
                     <div className="border-b border-slate-100 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{locale === "tr" ? "Bildirimler" : "Notifications"}</div>
                     {notifications.length ? notifications.slice(0, 8).map((n) => (
                       <button key={n.id} onClick={async () => { await fetch("/api/notifications", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: n.id }) }); void loadNotifications(); }} className="block w-full border-b border-slate-50 px-3 py-2.5 text-left last:border-0 hover:bg-ea-50">
@@ -268,7 +272,7 @@ export function AppShell({
               </div>
             )}
           </header>
-          <div className="mx-auto w-full max-w-7xl flex-1 p-4 md:p-8">{lockedOut ? null : children}</div>
+          <div className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col p-4 md:px-8 md:py-7">{lockedOut ? null : children}</div>
         </main>
       </div>
     </div>

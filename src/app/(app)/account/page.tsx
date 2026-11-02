@@ -2,7 +2,9 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import { KeyRound, ShieldAlert, UserCog } from "lucide-react";
 import { useLocale } from "@/components/ClientProviders";
+import { PageHeader } from "@/components/PageHeader";
 
 export default function AccountPage() {
   const { locale } = useLocale();
@@ -37,15 +39,28 @@ export default function AccountPage() {
   }
 
   return (
-    <div className="mx-auto max-w-md">
-      <h1 className="text-2xl font-black tracking-tight">{tr ? "Hesap" : "Account"}</h1>
-      <p className="mt-2 text-sm text-slate-600">
-        {tr
-          ? "Devam etmeden önce geçici şifrenizi değiştirin. Yeni şifre en az 12 karakter olmalı ve eskisinden farklı olmalıdır."
-          : "Change your temporary password before continuing. The new password must be at least 12 characters and different from the current one."}
-      </p>
-      <form onSubmit={onSubmit} className="mt-6 space-y-4 rounded-2xl border border-slate-200 bg-white p-6">
-        <label className="block text-sm font-semibold text-slate-700">
+    <div className="mx-auto w-full max-w-2xl space-y-6">
+      <PageHeader icon={UserCog} title={tr ? "Hesap" : "Account"} />
+
+      <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 shadow-sm">
+        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-amber-100 text-amber-700">
+          <ShieldAlert className="h-5 w-5" />
+        </div>
+        <p className="pt-1 leading-relaxed">
+          {tr
+            ? "Devam etmeden önce geçici şifrenizi değiştirin. Yeni şifre en az 12 karakter olmalı ve eskisinden farklı olmalıdır."
+            : "Change your temporary password before continuing. The new password must be at least 12 characters and different from the current one."}
+        </p>
+      </div>
+
+      <form onSubmit={onSubmit} className="ea-card-pad space-y-5">
+        <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+          <div className="grid h-9 w-9 place-items-center rounded-xl bg-ea-50 text-ea-600">
+            <KeyRound className="h-4 w-4" />
+          </div>
+          <h2 className="ea-section-title text-base">{tr ? "Şifreyi değiştir" : "Change password"}</h2>
+        </div>
+        <label className="ea-label">
           {tr ? "Mevcut şifre" : "Current password"}
           <input
             type="password"
@@ -53,10 +68,10 @@ export default function AccountPage() {
             required
             value={currentPassword}
             onChange={(event) => setCurrentPassword(event.target.value)}
-            className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 outline-none focus:border-blue-600"
+            className="ea-input mt-1.5 py-2.5 normal-case tracking-normal"
           />
         </label>
-        <label className="block text-sm font-semibold text-slate-700">
+        <label className="ea-label">
           {tr ? "Yeni şifre" : "New password"}
           <input
             type="password"
@@ -65,14 +80,13 @@ export default function AccountPage() {
             minLength={12}
             value={newPassword}
             onChange={(event) => setNewPassword(event.target.value)}
-            className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 outline-none focus:border-blue-600"
+            className="ea-input mt-1.5 py-2.5 normal-case tracking-normal"
           />
         </label>
-        {error ? <p className="text-sm text-red-600">{error}</p> : null}
-        <button
-          disabled={loading}
-          className="w-full rounded-xl bg-blue-600 py-2.5 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-60"
-        >
+        {error ? (
+          <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>
+        ) : null}
+        <button disabled={loading} className="ea-btn-primary w-full py-2.5">
           {loading ? "..." : tr ? "Şifreyi değiştir" : "Change password"}
         </button>
       </form>

@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Kanban, Table2, X } from "lucide-react";
+import { Kanban, Plus, Search, Table2, Target, User, X } from "lucide-react";
 import { useLocale } from "@/components/ClientProviders";
+import { PageHeader } from "@/components/PageHeader";
 import { t } from "@/lib/i18n";
 import { formatLeadMoney, formatDate } from "@/lib/utils";
 import { getClientJson, invalidateClientJson } from "@/lib/client-json-cache";
@@ -170,93 +171,96 @@ export default function LeadsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-black">{t(locale, "leads")}</h1>
-          <p className="text-sm text-slate-500">
-            {locale === "tr" ? "Kanban pipeline + tablo görünümü" : "Kanban pipeline + table view"}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              setError("");
-              setNewOpen(true);
-            }}
-            className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white"
-          >
-            {t(locale, "newLead")}
-          </button>
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && load(q)}
-            placeholder={t(locale, "search")}
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-          />
-          <div className="flex rounded-xl border border-slate-200 bg-white p-1">
+      <PageHeader
+        title={t(locale, "leads")}
+        description={locale === "tr" ? "Kanban pipeline + tablo görünümü" : "Kanban pipeline + table view"}
+        icon={Target}
+        actions={
+          <>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && load(q)}
+                placeholder={t(locale, "search")}
+                className="ea-input w-56 max-w-full pl-9"
+              />
+            </div>
+            <div className="ea-seg">
+              <button
+                onClick={() => setView("kanban")}
+                className={`ea-seg-item ${view === "kanban" ? "ea-seg-item-active" : ""}`}
+              >
+                <Kanban className="h-3.5 w-3.5" /> Kanban
+              </button>
+              <button
+                onClick={() => setView("table")}
+                className={`ea-seg-item ${view === "table" ? "ea-seg-item-active" : ""}`}
+              >
+                <Table2 className="h-3.5 w-3.5" /> Table
+              </button>
+            </div>
             <button
-              onClick={() => setView("kanban")}
-              className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-bold ${view === "kanban" ? "bg-slate-900 text-white" : "text-slate-600"}`}
+              type="button"
+              onClick={() => {
+                setError("");
+                setNewOpen(true);
+              }}
+              className="ea-btn-primary"
             >
-              <Kanban className="h-3.5 w-3.5" /> Kanban
+              <Plus className="h-4 w-4" />
+              {t(locale, "newLead")}
             </button>
-            <button
-              onClick={() => setView("table")}
-              className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-bold ${view === "table" ? "bg-slate-900 text-white" : "text-slate-600"}`}
-            >
-              <Table2 className="h-3.5 w-3.5" /> Table
-            </button>
-          </div>
-        </div>
-      </div>
+          </>
+        }
+      />
 
-      {error ? <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
+      {error ? <p className="rounded-xl border border-red-100 bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
 
       {newOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-xl">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-bold">{t(locale, "newLead")}</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ea-950/40 p-4 backdrop-blur-sm">
+          <div className="ea-card max-h-[90dvh] w-full max-w-md overflow-y-auto p-6 shadow-2xl">
+            <div className="mb-5 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-ea-950">{t(locale, "newLead")}</h2>
               <button
                 type="button"
                 onClick={() => setNewOpen(false)}
-                className="rounded-lg p-1 text-slate-500 hover:bg-slate-100"
+                className="rounded-lg p-1 text-slate-500 hover:bg-ea-50 hover:text-ea-800"
                 aria-label="Close"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="space-y-3">
-              <label className="block text-sm">
+            <div className="space-y-4">
+              <label className="ea-label">
                 {locale === "tr" ? "Lead başlığı" : "Lead title"}
                 <input
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                  className="ea-input mt-1.5 font-normal normal-case tracking-normal"
                 />
               </label>
-              <label className="block text-sm">
+              <label className="ea-label">
                 {locale === "tr" ? "Kişi adı" : "Contact name"}
                 <input
                   value={newContactName}
                   onChange={(e) => setNewContactName(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                  className="ea-input mt-1.5 font-normal normal-case tracking-normal"
                 />
               </label>
               {stages[0] ? (
-                <p className="text-xs text-slate-500">
+                <p className="flex items-center gap-2 text-xs text-slate-500">
                   {locale === "tr" ? "Aşama:" : "Stage:"}{" "}
-                  {locale === "tr" ? stages[0].nameTr : stages[0].name}
+                  <span className="ea-chip">{locale === "tr" ? stages[0].nameTr : stages[0].name}</span>
                 </p>
               ) : null}
             </div>
-            <div className="mt-5 flex justify-end gap-2">
+            <div className="mt-6 flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setNewOpen(false)}
-                className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold"
+                className="ea-btn"
               >
                 {locale === "tr" ? "İptal" : "Cancel"}
               </button>
@@ -264,7 +268,7 @@ export default function LeadsPage() {
                 type="button"
                 disabled={creating}
                 onClick={() => void createLead()}
-                className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-60"
+                className="ea-btn-primary"
               >
                 {creating ? (locale === "tr" ? "Oluşturuluyor…" : "Creating…") : locale === "tr" ? "Oluştur" : "Create"}
               </button>
@@ -274,76 +278,81 @@ export default function LeadsPage() {
       ) : null}
 
       {view === "kanban" ? (
-        <div className="flex gap-4 overflow-x-auto pb-2">
-          {stages.map((stage) => (
-            <section
-              key={stage.id}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={() => {
-                if (draggingId) void moveStage(draggingId, stage.id);
-                setDraggingId(null);
-              }}
-              className="min-w-[260px] flex-1 rounded-2xl border border-slate-200 bg-slate-50/80 p-3"
-            >
-              <div className="mb-3 flex items-center justify-between px-1">
-                <h2 className="text-sm font-bold">{locale === "tr" ? stage.nameTr : stage.name}</h2>
-                <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-slate-500">
-                  {(byStage.get(stage.id) || []).length}
-                </span>
-              </div>
-              <div className="space-y-2">
-                {(byStage.get(stage.id) || []).map((lead) => {
-                  const valueLabel = formatLeadMoney(lead.expectedValue, dateLocale);
-                  return (
-                    <article
-                      key={lead.id}
-                      draggable
-                      onDragStart={() => setDraggingId(lead.id)}
-                      onDragEnd={() => setDraggingId(null)}
-                      className="cursor-grab rounded-xl border border-slate-200 bg-white p-3 shadow-sm active:cursor-grabbing"
-                    >
-                      <div className="font-semibold">{lead.title}</div>
-                      <div className="mt-1 text-xs text-slate-500">{lead.contact?.displayName || "—"}</div>
-                      <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
-                        <span className="rounded bg-blue-50 px-1.5 py-0.5 font-bold text-blue-700">
-                          {lead.score}
-                        </span>
-                        <span className="capitalize text-slate-500">{lead.source}</span>
-                        {valueLabel ? (
-                          <span className="font-semibold text-slate-700">{valueLabel}</span>
-                        ) : null}
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-            </section>
-          ))}
+        <div className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-3 md:-mx-1 md:px-1">
+          {stages.map((stage, index) => {
+            const stageLeads = byStage.get(stage.id) || [];
+            return (
+              <section
+                key={stage.id}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={() => {
+                  if (draggingId) void moveStage(draggingId, stage.id);
+                  setDraggingId(null);
+                }}
+                className="flex w-72 shrink-0 flex-col overflow-hidden rounded-2xl border border-ea-900/[0.08] bg-slate-50/80 shadow-[0_1px_2px_rgba(13,35,71,0.04)]"
+              >
+                <div className={`h-1 shrink-0 ${stageAccent(stage, index)}`} />
+                <div className="flex items-center justify-between gap-2 px-4 pb-2 pt-3">
+                  <h2 className="truncate text-sm font-bold text-ea-950">{locale === "tr" ? stage.nameTr : stage.name}</h2>
+                  <span className="ea-chip shrink-0">{stageLeads.length}</span>
+                </div>
+                <div className="max-h-[calc(100dvh-16rem)] min-h-24 flex-1 space-y-2 overflow-y-auto px-3 pb-3">
+                  {stageLeads.map((lead) => {
+                    const valueLabel = formatLeadMoney(lead.expectedValue, dateLocale);
+                    return (
+                      <article
+                        key={lead.id}
+                        draggable
+                        onDragStart={() => setDraggingId(lead.id)}
+                        onDragEnd={() => setDraggingId(null)}
+                        className={`cursor-grab rounded-xl border border-slate-200 bg-white p-3 shadow-sm transition hover:border-ea-300 hover:shadow-md hover:ring-2 hover:ring-ea-500/10 active:cursor-grabbing ${draggingId === lead.id ? "opacity-60" : ""}`}
+                      >
+                        <div className="break-words font-bold text-ea-950">{lead.title}</div>
+                        <div className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
+                          <User className="h-3 w-3 shrink-0" />
+                          <span className="truncate">{lead.contact?.displayName || "—"}</span>
+                        </div>
+                        <div className="mt-2.5 flex flex-wrap items-center gap-2 text-[11px]">
+                          <span className="ea-chip">
+                            {lead.score}
+                          </span>
+                          <span className="capitalize text-slate-500">{lead.source}</span>
+                          {valueLabel ? (
+                            <span className="ml-auto font-semibold text-ea-900">{valueLabel}</span>
+                          ) : null}
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              </section>
+            );
+          })}
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <table className="min-w-full text-left text-sm">
-            <thead className="border-b border-slate-100 bg-slate-50 text-xs uppercase text-slate-500">
+        <div className="ea-table-wrap">
+          <table className="ea-table">
+            <thead>
               <tr>
-                <th className="px-4 py-3">Lead</th>
-                <th className="px-4 py-3">{t(locale, "source")}</th>
-                <th className="px-4 py-3">{t(locale, "stage")}</th>
-                <th className="px-4 py-3">Score</th>
-                <th className="px-4 py-3">Value</th>
-                <th className="px-4 py-3">{t(locale, "followUp")}</th>
+                <th>Lead</th>
+                <th>{t(locale, "source")}</th>
+                <th>{t(locale, "stage")}</th>
+                <th>Score</th>
+                <th>Value</th>
+                <th>{t(locale, "followUp")}</th>
               </tr>
             </thead>
             <tbody>
               {leads.map((l) => (
-                <tr key={l.id} className="border-b border-slate-50">
-                  <td className="px-4 py-3">
-                    <div className="font-semibold">{l.title}</div>
+                <tr key={l.id}>
+                  <td>
+                    <div className="font-semibold text-ea-950">{l.title}</div>
                     <div className="text-xs text-slate-500">{l.contact?.displayName}</div>
                   </td>
-                  <td className="px-4 py-3 capitalize">{l.source}</td>
-                  <td className="px-4 py-3">
+                  <td className="capitalize text-slate-600">{l.source}</td>
+                  <td>
                     <select
-                      className="rounded-lg border border-slate-200 px-2 py-1"
+                      className="ea-input w-auto py-1.5 text-xs"
                       value={l.stageId}
                       onChange={(e) => void moveStage(l.id, e.target.value)}
                     >
@@ -354,9 +363,9 @@ export default function LeadsPage() {
                       ))}
                     </select>
                   </td>
-                  <td className="px-4 py-3 font-bold text-blue-700">{l.score}</td>
-                  <td className="px-4 py-3">{formatLeadMoney(l.expectedValue, dateLocale) || "—"}</td>
-                  <td className="px-4 py-3 text-xs">
+                  <td><span className="ea-chip">{l.score}</span></td>
+                  <td className="whitespace-nowrap font-medium text-ea-900">{formatLeadMoney(l.expectedValue, dateLocale) || "—"}</td>
+                  <td className="whitespace-nowrap text-xs text-slate-600">
                     {formatDate(l.nextFollowupAt, dateLocale)}
                   </td>
                 </tr>
@@ -367,4 +376,12 @@ export default function LeadsPage() {
       )}
     </div>
   );
+}
+
+const STAGE_ACCENTS = ["bg-ea-400", "bg-ea-600", "bg-aqua-500", "bg-indigo-500", "bg-sky-600", "bg-ea-800"];
+
+function stageAccent(stage: Stage, index: number) {
+  if (stage.isWon) return "bg-emerald-500";
+  if (stage.isLost) return "bg-rose-500";
+  return STAGE_ACCENTS[index % STAGE_ACCENTS.length];
 }

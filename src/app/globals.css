@@ -3,21 +3,25 @@
 @tailwind utilities;
 
 :root {
-  --background: #f2f6fb;
+  --background: #f3f6fb;
   --foreground: #10213d;
+}
+
+html,
+body {
+  height: 100%;
 }
 
 body {
   color: var(--foreground);
   background:
-    radial-gradient(900px 420px at 100% -80px, rgba(0, 173, 239, 0.1), transparent 55%),
-    radial-gradient(700px 360px at -10% 110%, rgba(56, 113, 193, 0.08), transparent 60%),
+    radial-gradient(900px 420px at 100% -80px, rgba(0, 173, 239, 0.08), transparent 55%),
+    radial-gradient(700px 360px at -10% 110%, rgba(56, 113, 193, 0.06), transparent 60%),
     var(--background);
-  background-attachment: fixed;
 }
 
 h1 {
-  letter-spacing: -0.035em;
+  letter-spacing: -0.03em;
 }
 
 input,
@@ -33,4 +37,90 @@ textarea:focus {
   outline: none;
   border-color: #3871c1;
   box-shadow: 0 0 0 3px rgb(56 113 193 / 0.16);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(29 60 105 / 0.25) transparent;
+}
+
+@layer components {
+  /* Surfaces */
+  .ea-card {
+    @apply rounded-2xl border border-ea-900/[0.08] bg-white shadow-[0_1px_2px_rgba(13,35,71,0.04),0_12px_32px_-24px_rgba(13,35,71,0.35)];
+  }
+  .ea-card-pad {
+    @apply ea-card p-5 md:p-6;
+  }
+  .ea-section-title {
+    @apply text-sm font-semibold text-ea-950;
+  }
+  .ea-muted {
+    @apply text-sm text-slate-500;
+  }
+
+  /* Buttons */
+  .ea-btn {
+    @apply inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-ea-900/10 bg-white px-3.5 py-2 text-sm font-semibold text-ea-900 shadow-sm transition hover:border-ea-500/40 hover:bg-ea-50 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .ea-btn-sm {
+    @apply ea-btn rounded-lg px-2.5 py-1.5 text-xs;
+  }
+  .ea-btn-primary {
+    @apply inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-ea-600 px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-ea-600/25 transition hover:bg-ea-700 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .ea-btn-danger {
+    @apply inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-rose-200 bg-white px-3.5 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-50;
+  }
+
+  /* Fields */
+  .ea-input {
+    @apply w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400;
+  }
+  .ea-label {
+    @apply block text-xs font-semibold uppercase tracking-wide text-slate-500;
+  }
+
+  /* Small status chips */
+  .ea-chip {
+    @apply inline-flex items-center gap-1 rounded-full bg-ea-50 px-2 py-0.5 text-[11px] font-semibold text-ea-700 ring-1 ring-inset ring-ea-600/15;
+  }
+  .ea-chip-neutral {
+    @apply inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600;
+  }
+
+  /* Segmented control (view switchers, tabs) */
+  .ea-seg {
+    @apply inline-flex rounded-xl border border-ea-900/10 bg-white p-1 shadow-sm;
+  }
+  .ea-seg-item {
+    @apply inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:text-ea-800;
+  }
+  .ea-seg-item-active {
+    @apply bg-ea-600 text-white hover:text-white;
+  }
+
+  /* Tables */
+  .ea-table-wrap {
+    @apply ea-card overflow-x-auto;
+  }
+  .ea-table {
+    @apply min-w-full text-left text-sm;
+  }
+  .ea-table thead {
+    @apply border-b border-slate-100 bg-ea-50/60 text-[11px] font-semibold uppercase tracking-wide text-slate-500;
+  }
+  .ea-table th {
+    @apply whitespace-nowrap px-4 py-3;
+  }
+  .ea-table td {
+    @apply px-4 py-3 align-middle;
+  }
+  .ea-table tbody tr {
+    @apply border-b border-slate-50 transition last:border-0 hover:bg-ea-50/40;
+  }
+
+  .ea-empty {
+    @apply flex flex-col items-center justify-center gap-2 px-6 py-12 text-center text-sm text-slate-500;
+  }
 }
