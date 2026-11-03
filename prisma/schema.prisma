@@ -18,6 +18,8 @@ enum LeadSource {
   google_ads
   manual
   referral
+  facebook
+  instagram
 }
 
 enum ConversationStatus {
