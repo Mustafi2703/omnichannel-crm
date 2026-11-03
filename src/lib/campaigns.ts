@@ -1,5 +1,5 @@
 import { prisma } from "./prisma";
-import { isAisensyTemplateDeliveryConfigured, logWhatsappUsage, sendAisensyTemplate } from "./aisensy";
+import { isAisensyConfigured, logWhatsappUsage, sendAisensyTemplate } from "./aisensy";
 
 const BATCH_SIZE = 25;
 const MAX_ATTEMPTS = 3;
@@ -46,7 +46,7 @@ async function deliverRecipient(recipient: CampaignRecipientForDelivery, now: Da
     await prisma.campaignRecipient.update({ where: { id: recipient.id }, data: { status: "failed", error: "Template variables require a provider-approved mapping", sendingAt: null } });
     return;
   }
-  if (!isAisensyTemplateDeliveryConfigured()) {
+  if (!isAisensyConfigured()) {
     await prisma.campaignRecipient.update({ where: { id: recipient.id }, data: { status: "failed", error: "AiSensy template delivery is not configured", sendingAt: null } });
     return;
   }
