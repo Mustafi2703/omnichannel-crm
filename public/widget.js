@@ -14,10 +14,15 @@
   if (!tenant || document.getElementById("omni-widget-root")) return;
 
   const storageKey = `omni_widget_${tenant}`;
-  const historyKey = `${storageKey}_history`;
-  const metaKey = `${storageKey}_meta`;
-  const visitorId = localStorage.getItem(storageKey) || `web-${crypto.randomUUID()}`;
-  localStorage.setItem(storageKey, visitorId);
+  const forcedVisitor = script?.getAttribute("data-visitor")?.trim();
+  const visitorId = forcedVisitor || localStorage.getItem(storageKey) || `web-${crypto.randomUUID()}`;
+  if (!forcedVisitor) localStorage.setItem(storageKey, visitorId);
+  const historyKey = forcedVisitor ? `${storageKey}_${forcedVisitor}_history` : `${storageKey}_history`;
+  const metaKey = forcedVisitor ? `${storageKey}_${forcedVisitor}_meta` : `${storageKey}_meta`;
+  const presetName = script?.getAttribute("data-name")?.trim() || "";
+  const presetPhone = script?.getAttribute("data-phone")?.trim() || "";
+  const captureRequired = script?.getAttribute("data-capture") === "required";
+  const openOnLoad = script?.getAttribute("data-open") === "true";
   const meta = (() => {
     try {
       return JSON.parse(localStorage.getItem(metaKey) || "{}");
@@ -138,11 +143,17 @@
   } catch {
     /* ignore */
   }
-  if (meta.name) nameInput.value = meta.name;
-  if (meta.phone) phoneInput.value = meta.phone;
-  if (!meta.name) {
+  if (meta.name || presetName) nameInput.value = meta.name || presetName;
+  if (meta.phone || presetPhone) phoneInput.value = meta.phone || presetPhone;
+  if (!nameInput.value || captureRequired) {
     nameInput.style.display = "";
     phoneInput.style.display = "";
+  }
+  if (captureRequired) {
+    nameInput.placeholder = navigator.language.startsWith("tr") ? "Adınız" : "Your name";
+    phoneInput.placeholder = navigator.language.startsWith("tr") ? "Telefon" : "Phone";
+    nameInput.required = true;
+    phoneInput.required = true;
   }
 
   void fetch(`${api}/api/widget/config?tenant=${encodeURIComponent(tenant)}`)
@@ -198,10 +209,19 @@
   setInterval(pollAgentReplies, 8000);
   void pollAgentReplies();
 
+  if (openOnLoad) panel.hidden = false;
+
   form.onsubmit = async (event) => {
     event.preventDefault();
     const text = input.value.trim();
     if (!text) return;
+    if (captureRequired && (!nameInput.value.trim() || !phoneInput.value.trim())) {
+      errorEl.textContent = navigator.language.startsWith("tr")
+        ? "Devam etmek için ad ve telefon gerekli."
+        : "Name and phone are required before the first message.";
+      errorEl.hidden = false;
+      return;
+    }
     input.value = "";
     errorEl.hidden = true;
     add(text, true);

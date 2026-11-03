@@ -211,7 +211,9 @@ export async function POST(req: Request) {
   }
 
   let reply =
-    locale === "tr" ? "Mesajınız alındı. Kısa süre içinde dönüş yapacağız." : "Thanks — we received your message.";
+    locale === "tr"
+      ? "Bu görüşme bir danışmana aktarıldı. Bir temsilci kısa süre içinde yazacak."
+      : "This chat has been passed to an adviser. A person will reply shortly.";
   let handoff = false;
   let aiMeta: object | undefined;
 
