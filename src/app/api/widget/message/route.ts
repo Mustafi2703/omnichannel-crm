@@ -5,14 +5,7 @@ import { z } from "zod";
 import { apiError } from "@/lib/api";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { runAutomations } from "@/lib/automation";
-import { corsHeaders, normaliseOriginList } from "@/lib/widget-cors";
-
-function resolveAllowedOrigins(tenantSettings: { widgetAllowedOrigins?: string[] }) {
-  const fromTenant = normaliseOriginList(tenantSettings.widgetAllowedOrigins);
-  const fromEnv = normaliseOriginList((process.env.WIDGET_ALLOWED_ORIGINS || "").split(","));
-  // Prefer tenant list when set; always include env list as fallback for CRM demo origins.
-  return fromTenant.length ? [...new Set([...fromTenant, ...fromEnv])] : fromEnv;
-}
+import { corsHeaders, resolveAllowedOrigins } from "@/lib/widget-cors";
 
 async function honourOptOut(params: {
   tenantId: string;
@@ -342,7 +335,7 @@ export async function POST(req: Request) {
 export async function OPTIONS(req: Request) {
   const origin = req.headers.get("origin") || "";
   const slug = new URL(req.url).searchParams.get("tenant") || process.env.DEFAULT_TENANT_SLUG || "";
-  let allowed = normaliseOriginList((process.env.WIDGET_ALLOWED_ORIGINS || "").split(","));
+  let allowed = resolveAllowedOrigins();
   if (slug) {
     const tenant = await prisma.tenant.findUnique({ where: { slug }, select: { settings: true } });
     if (tenant) allowed = resolveAllowedOrigins(tenant.settings as { widgetAllowedOrigins?: string[] });

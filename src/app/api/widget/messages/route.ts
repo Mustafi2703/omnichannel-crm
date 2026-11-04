@@ -1,12 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { corsHeaders, normaliseOriginList } from "@/lib/widget-cors";
-
-function resolveAllowedOrigins(tenantSettings: { widgetAllowedOrigins?: string[] }) {
-  const fromTenant = normaliseOriginList(tenantSettings.widgetAllowedOrigins);
-  const fromEnv = normaliseOriginList((process.env.WIDGET_ALLOWED_ORIGINS || "").split(","));
-  return fromTenant.length ? [...new Set([...fromTenant, ...fromEnv])] : fromEnv;
-}
+import { corsHeaders, resolveAllowedOrigins } from "@/lib/widget-cors";
 
 /** Visitor poll for adviser replies after handoff (website channel). */
 export async function GET(req: Request) {
@@ -75,7 +69,7 @@ export async function GET(req: Request) {
 export async function OPTIONS(req: Request) {
   const origin = req.headers.get("origin") || "";
   const slug = new URL(req.url).searchParams.get("tenant") || "";
-  let allowed = normaliseOriginList((process.env.WIDGET_ALLOWED_ORIGINS || "").split(","));
+  let allowed = resolveAllowedOrigins();
   if (slug) {
     const tenant = await prisma.tenant.findUnique({ where: { slug }, select: { settings: true } });
     if (tenant) allowed = resolveAllowedOrigins(tenant.settings as { widgetAllowedOrigins?: string[] });
