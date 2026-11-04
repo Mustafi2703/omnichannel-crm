@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/auth";
 import { generateBotReply, logAiUsage } from "@/lib/ai";
 import { sendAisensyTemplate, sendAisensyText, logWhatsappUsage } from "@/lib/aisensy";
+import { isMetaChannel, sendMetaReply } from "@/lib/meta";
 import { z } from "zod";
 import { fromApiError, idSchema } from "@/lib/api";
 import { notify } from "@/lib/notifications";
@@ -119,6 +120,16 @@ export async function POST(req: Request, ctx: Ctx) {
       else {
         deliveryStatus = "failed";
         deliveryError = send.error || "WhatsApp delivery failed";
+      }
+    }
+    if (isMetaChannel(conversation.channelType) && senderType === "agent") {
+      // A comment conversation answers the customer's latest comment; a DM goes to the sender.
+      const lastInbound = conversation.messages.find((message) => message.direction === "inbound");
+      const send = await sendMetaReply(conversation.channelType, { to: conversation.externalThreadId || "", replyToId: lastInbound?.externalMessageId || undefined, text: replyText });
+      externalMessageId = send.externalMessageId;
+      if (!send.ok) {
+        deliveryStatus = "failed";
+        deliveryError = send.error || "Meta delivery failed";
       }
     }
 

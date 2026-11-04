@@ -1,8 +1,11 @@
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { prisma } from "./prisma";
+import type { SendResult } from "./inbound";
 
 /**
- * AiSensy WhatsApp adapter (LeadGen-class channel).
- * Configure AISENSY_API_KEY + AISENSY_API_URL to go live.
+ * AiSensy WhatsApp adapter on AiSensy's Project API (PRO plan).
+ * Go live with AISENSY_PROJECT_ID + AISENSY_PROJECT_API_PWD (from a Custom App)
+ * and AISENSY_WEBHOOK_SECRET (the webhook's shared secret).
  * Docs: docs/AISENSY_INTEGRATION.md
  */
 
@@ -11,112 +14,98 @@ export type NormalizedInbound = {
   from: string;
   text: string;
   contactName?: string;
-  timestamp?: string;
 };
 
+const API_BASE = "https://apis.aisensy.com/project-apis/v1/project";
+
+const hmac = (secret: string, body: string) => createHmac("sha256", secret).update(body).digest("hex");
+
+/** X-AiSensy-Signature is the hex HMAC-SHA256 of the request body, keyed with the webhook's shared secret. */
 export function verifyAisensySignature(rawBody: string, signature: string | null) {
   const secret = process.env.AISENSY_WEBHOOK_SECRET;
   // Fail closed: WhatsApp injection is blocked until a webhook secret is configured.
-  if (!secret) return false;
-  if (!signature) return false;
-  return signature === secret || signature === `Bearer ${secret}`;
+  if (!secret || !signature) return false;
+  const received = Buffer.from(signature.trim().toLowerCase());
+  const matches = (body: string) => {
+    const expected = Buffer.from(hmac(secret, body));
+    return expected.length === received.length && timingSafeEqual(expected, received);
+  };
+  if (matches(rawBody)) return true;
+  // AiSensy's own Node sample signs JSON.stringify(body), so accept the re-serialised form too.
+  try {
+    return matches(JSON.stringify(JSON.parse(rawBody)));
+  } catch {
+    return false;
+  }
 }
 
-export function parseAisensyWebhook(payload: unknown): NormalizedInbound[] {
-  const body = payload as Record<string, unknown>;
-  // Support a few common BSP shapes + our demo shape
-  if (Array.isArray(body.messages)) {
-    return (body.messages as Record<string, unknown>[]).map((m, i) => ({
-      externalMessageId: String(m.id || m.messageId || `aisensy-${Date.now()}-${i}`),
-      from: String(m.from || m.waId || m.phone || ""),
-      text: String(
-        (m.text as { body?: string } | undefined)?.body ||
-          m.body ||
-          m.message ||
-          "",
-      ),
-      contactName: String(m.profileName || m.name || "") || undefined,
-    }));
-  }
-  if (body.from && (body.text || body.message)) {
-    return [
-      {
-        externalMessageId: String(body.id || body.messageId || `aisensy-${Date.now()}`),
-        from: String(body.from),
-        text: String(body.text || body.message),
-        contactName: body.name ? String(body.name) : undefined,
-      },
-    ];
-  }
-  return [];
+type AisensyMessage = {
+  id?: string;
+  messageId?: string;
+  phone_number?: string;
+  message_type?: string;
+  message_content?: { text?: string; title?: string; caption?: string; url?: string };
+  user_name?: string;
+  userName?: string;
+};
+
+/** Project webhook notification `{ id, topic, data: { message } }`; only "message.sender.user" is a customer message. */
+export function parseAisensyNotification(payload: unknown): NormalizedInbound | null {
+  const notification = payload as { id?: string; topic?: string; data?: { message?: AisensyMessage } } | null;
+  const message = notification?.data?.message;
+  const externalMessageId = message?.messageId || message?.id || notification?.id;
+  if (notification?.topic !== "message.sender.user" || !message?.phone_number || !externalMessageId) return null;
+  const content = message.message_content || {};
+  // Text, button and list replies carry words; media without a caption is shown as its type and link.
+  const text = (content.text || content.title || content.caption || "").trim()
+    || `[${message.message_type || "MESSAGE"}]${content.url ? ` ${content.url}` : ""}`;
+  return {
+    externalMessageId: String(externalMessageId),
+    from: message.phone_number.replace(/\D/g, ""),
+    text,
+    contactName: message.user_name || message.userName || undefined,
+  };
 }
 
-export async function sendAisensyText(params: {
-  to: string;
-  text: string;
-}): Promise<{ ok: boolean; externalMessageId?: string; demo?: boolean; error?: string }> {
-  const apiKey = process.env.AISENSY_API_KEY;
-  const apiUrl = process.env.AISENSY_API_URL; // e.g. https://backend.aisensy.com/campaign/t1/api/v2
-  if (!apiKey || !apiUrl) {
-    const fakeId = `demo-wa-${Date.now()}`;
-    console.info("[AiSensy demo send]", params.to, params.text.slice(0, 80));
-    return { ok: true, externalMessageId: fakeId, demo: true };
+export function isAisensyConfigured() {
+  return Boolean(process.env.AISENSY_PROJECT_ID && process.env.AISENSY_PROJECT_API_PWD);
+}
+
+async function sendAisensyMessage(to: string, body: Record<string, unknown>): Promise<SendResult> {
+  if (!isAisensyConfigured()) {
+    console.info("[AiSensy demo send]", to, JSON.stringify(body).slice(0, 80));
+    return { ok: true, externalMessageId: `demo-wa-${Date.now()}`, demo: true };
   }
   try {
-    const res = await fetch(apiUrl, {
+    const res = await fetch(`${API_BASE}/${process.env.AISENSY_PROJECT_ID}/messages`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
+        Accept: "application/json",
+        "X-AiSensy-Project-API-Pwd": process.env.AISENSY_PROJECT_API_PWD!,
       },
-      body: JSON.stringify({
-        to: params.to,
-        type: "text",
-        text: { body: params.text },
-      }),
+      body: JSON.stringify({ to: to.replace(/\D/g, ""), recipient_type: "individual", ...body }),
+      signal: AbortSignal.timeout(15_000),
     });
-    if (!res.ok) {
-      return { ok: false, error: await res.text() };
-    }
-    const data = (await res.json().catch(() => ({}))) as { id?: string; messageId?: string };
-    return { ok: true, externalMessageId: data.id || data.messageId || `wa-${Date.now()}` };
+    if (!res.ok) return { ok: false, error: await res.text() };
+    const data = (await res.json().catch(() => ({}))) as { messages?: { id?: string }[] };
+    return { ok: true, externalMessageId: data.messages?.[0]?.id };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "send failed" };
   }
 }
 
-/**
- * The template endpoint is kept separate because providers commonly require a
- * different payload/URL from free-form session messages. No free-form fallback
- * is permitted when the WhatsApp service window is closed.
- */
-export async function sendAisensyTemplate(params: { to: string; name: string; language: string; providerTemplateId?: string | null }): Promise<{ ok: boolean; externalMessageId?: string; demo?: boolean; error?: string }> {
-  const apiKey = process.env.AISENSY_API_KEY;
-  const apiUrl = process.env.AISENSY_TEMPLATE_API_URL;
-  if (!apiKey && !apiUrl) {
-    return { ok: true, externalMessageId: `demo-wa-template-${Date.now()}`, demo: true };
-  }
-  if (!apiKey || !apiUrl) return { ok: false, error: "AISENSY_TEMPLATE_API_URL and AISENSY_API_KEY are required for approved template sends" };
-  try {
-    const response = await fetch(apiUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        to: params.to,
-        type: "template",
-        template: { name: params.providerTemplateId || params.name, language: { code: params.language } },
-      }),
-    });
-    if (!response.ok) return { ok: false, error: await response.text() };
-    const data = (await response.json().catch(() => ({}))) as { id?: string; messageId?: string };
-    return { ok: true, externalMessageId: data.id || data.messageId || `wa-template-${Date.now()}` };
-  } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : "template send failed" };
-  }
+/** Free-form text; WhatsApp only accepts it inside the 24-hour service window. */
+export function sendAisensyText(params: { to: string; text: string }) {
+  return sendAisensyMessage(params.to, { type: "text", text: { body: params.text } });
 }
 
-export function isAisensyTemplateDeliveryConfigured() {
-  return Boolean(process.env.AISENSY_API_KEY && process.env.AISENSY_TEMPLATE_API_URL);
+/** An approved template, by its Meta template name. Required outside the 24-hour window. */
+export function sendAisensyTemplate(params: { to: string; name: string; language: string; providerTemplateId?: string | null }) {
+  return sendAisensyMessage(params.to, {
+    type: "template",
+    template: { name: params.providerTemplateId || params.name, language: { code: params.language } },
+  });
 }
 
 export async function logWhatsappUsage(
